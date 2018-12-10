@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25123.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DE9346CD-69DE-44B7-A9B2-C670E7F14A15}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{CEA28673-6106-437A-B09C-85ADC8715E50}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuxiliaryStack.Reactor.Core", "src\AuxiliaryStack.Reactor.Core\AuxiliaryStack.Reactor.Core.csproj", "{575C82D9-2A77-4BBF-AA31-A52B0EE8B32A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuxiliaryStack.Reactor.Core.Test", "tests\AuxiliaryStack.Reactor.Core.Test\AuxiliaryStack.Reactor.Core.Test.csproj", "{325EE400-42DF-4EF5-BA5C-6667CB9D3BBD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{575C82D9-2A77-4BBF-AA31-A52B0EE8B32A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{575C82D9-2A77-4BBF-AA31-A52B0EE8B32A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{575C82D9-2A77-4BBF-AA31-A52B0EE8B32A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{575C82D9-2A77-4BBF-AA31-A52B0EE8B32A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{325EE400-42DF-4EF5-BA5C-6667CB9D3BBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{325EE400-42DF-4EF5-BA5C-6667CB9D3BBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{325EE400-42DF-4EF5-BA5C-6667CB9D3BBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{325EE400-42DF-4EF5-BA5C-6667CB9D3BBD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{575C82D9-2A77-4BBF-AA31-A52B0EE8B32A} = {DE9346CD-69DE-44B7-A9B2-C670E7F14A15}
+		{325EE400-42DF-4EF5-BA5C-6667CB9D3BBD} = {CEA28673-6106-437A-B09C-85ADC8715E50}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ContentModelStore">
+    <e p="$APPLICATION_CONFIG_DIR$/consoles/db" t="IncludeRecursive" />
+    <e p="$APPLICATION_CONFIG_DIR$/extensions" t="IncludeRecursive" />
+    <e p="$APPLICATION_CONFIG_DIR$/scratches" t="IncludeRecursive" />
+    <e p="$USER_HOME$/.Rider2018.2/system/extResources" t="IncludeRecursive" />
+    <e p="$USER_HOME$/.Rider2018.2/system/resharper-host/local/Transient/ReSharperHost/v182/SolutionCaches/_AuxiliaryStack.Reactor.-1036843443.00" t="ExcludeRecursive" />
+    <e p="$USER_HOME$/.nuget/packages/xunit.runner.visualstudio/2.3.1/build/netcoreapp1.0/xunit.runner.reporters.netcoreapp10.dll" t="Include" />
+    <e p="$USER_HOME$/.nuget/packages/xunit.runner.visualstudio/2.3.1/build/netcoreapp1.0/xunit.runner.utility.netcoreapp10.dll" t="Include" />
+    <e p="$USER_HOME$/.nuget/packages/xunit.runner.visualstudio/2.3.1/build/netcoreapp1.0/xunit.runner.visualstudio.dotnetcore.testadapter.dll" t="Include" />
+    <e p="$PROJECT_DIR$" t="IncludeFlat">
+      <e p=".git/info/exclude" t="IncludeRecursive" />
+      <e p="AuxiliaryStack.Reactor.sln" t="IncludeFlat" />
+      <e p="packages" t="ExcludeRecursive" />
+      <e p="src" t="Include">
+        <e p="AuxiliaryStack.Reactor.Core" t="IncludeRecursive">
+          <e p="Abstractions" t="Include">
+            <e p="IConnectableFlux.cs" t="Include" />
+            <e p="IFlux.cs" t="Include" />
+            <e p="IFluxEmitter.cs" t="Include" />
+            <e p="IFluxProcessor.cs" t="Include" />
+            <e p="IGroupedFlux.cs" t="Include" />
+            <e p="IMono.cs" t="Include" />
+            <e p="IMonoEmitter.cs" t="Include" />
+            <e p="IOrderedItem.cs" t="Include" />
+            <e p="IParallelFlux.cs" t="Include" />
+            <e p="IReactiveStreams.cs" t="Include" />
+            <e p="IScheduler.cs" t="Include" />
+            <e p="IScheduling.cs" t="Include" />
+            <e p="ISignal.cs" t="Include" />
+            <e p="ISignalEmitter.cs" t="Include" />
+            <e p="ITimeSource.cs" t="Include" />
+            <e p="ITimedScheduler.cs" t="Include" />
+            <e p="ITimedScheduling.cs" t="Include" />
+            <e p="ITimedWorker.cs" t="Include" />
+            <e p="IWorker.cs" t="Include" />
+            <e p="ParallelFluxHelper.cs" t="Include" />
+            <e p="ParallelOrderedFlux.cs" t="Include" />
+            <e p="ParallelUnorderedFlux.cs" t="Include" />
+            <e p="RejectedDisposable.cs" t="Include" />
+            <e p="RemoveOrdered.cs" t="Include" />
+            <e p="SchedulerHelper.cs" t="Include" />
+          </e>
+          <e p="AuxiliaryStack.Reactor.Core.csproj" t="IncludeRecursive" />
+          <e p="BackpressureHandling.cs" t="Include" />
+          <e p="ConcatErrorMode.cs" t="Include" />
+          <e p="ConnectableFlux.cs" t="Include" />
+          <e p="DirectProcessor.cs" t="Include" />
+          <e p="ExceptionHelper.cs" t="Include" />
+          <e p="Flow" t="Include">
+            <e p="FuseableHelper.cs" t="Include" />
+            <e p="ICallable.cs" t="Include" />
+            <e p="IConditionalSubscriber.cs" t="Include" />
+            <e p="IQueue.cs" t="Include" />
+            <e p="IQueueSubscription.cs" t="Include" />
+            <e p="IScalarCallable.cs" t="Include" />
+          </e>
+          <e p="Flux.cs" t="Include" />
+          <e p="Mono.cs" t="Include" />
+          <e p="Parallel" t="Include">
+            <e p="ParallelFromPublishers.cs" t="Include" />
+            <e p="ParallelGroups.cs" t="Include" />
+            <e p="ParallelOrderedFilter.cs" t="Include" />
+            <e p="ParallelOrderedFork.cs" t="Include" />
+            <e p="ParallelOrderedJoin.cs" t="Include" />
+            <e p="ParallelOrderedMap.cs" t="Include" />
+            <e p="ParallelOrderedRunOn.cs" t="Include" />
+            <e p="ParallelReduce.cs" t="Include" />
+            <e p="ParallelReduceFull.cs" t="Include" />
+            <e p="ParallelSortedJoin.cs" t="Include" />
+            <e p="ParallelUnorderedFilter.cs" t="Include" />
+            <e p="ParallelUnorderedFork.cs" t="Include" />
+            <e p="ParallelUnorderedJoin.cs" t="Include" />
+            <e p="ParallelUnorderedMap.cs" t="Include" />
+            <e p="ParallelUnorderedRunOn.cs" t="Include" />
+          </e>
+          <e p="ParallelFlux.cs" t="Include" />
+          <e p="PublishProcessor.cs" t="Include" />
+          <e p="Publisher" t="Include">
+            <e p="MonoPublishOn.cs" t="Include" />
+            <e p="PublisherAction.cs" t="Include" />
+            <e p="PublisherAll.cs" t="Include" />
+            <e p="PublisherAmb.cs" t="Include" />
+            <e p="PublisherAny.cs" t="Include" />
+            <e p="PublisherArray.cs" t="Include" />
+            <e p="PublisherAsEnumerable.cs" t="Include" />
+            <e p="PublisherAsObservable.cs" t="Include" />
+            <e p="PublisherBufferBoundary.cs" t="Include" />
+            <e p="PublisherBufferOpenClose.cs" t="Include" />
+            <e p="PublisherBufferSize.cs" t="Include" />
+            <e p="PublisherBufferTimeAndSize.cs" t="Include" />
+            <e p="PublisherCache.cs" t="Include" />
+            <e p="PublisherCallableXMap.cs" t="Include" />
+            <e p="PublisherCollect.cs" t="Include" />
+            <e p="PublisherCombineLatest.cs" t="Include" />
+            <e p="PublisherConcatArray.cs" t="Include" />
+            <e p="PublisherConcatEnumerable.cs" t="Include" />
+            <e p="PublisherConcatMap.cs" t="Include" />
+            <e p="PublisherCount.cs" t="Include" />
+            <e p="PublisherCreate.cs" t="Include" />
+            <e p="PublisherDefaultIfEmpty.cs" t="Include" />
+            <e p="PublisherDefer.cs" t="Include" />
+            <e p="PublisherDelay.cs" t="Include" />
+            <e p="PublisherDelaySubscription.cs" t="Include" />
+            <e p="PublisherDematerialize.cs" t="Include" />
+            <e p="PublisherDistinct.cs" t="Include" />
+            <e p="PublisherDistinctUntilChanged.cs" t="Include" />
+            <e p="PublisherElapsed.cs" t="Include" />
+            <e p="PublisherElementAt.cs" t="Include" />
+            <e p="PublisherEmpty.cs" t="Include" />
+            <e p="PublisherEnumerable.cs" t="Include" />
+            <e p="PublisherError.cs" t="Include" />
+            <e p="PublisherFilter.cs" t="Include" />
+            <e p="PublisherFirstOrEmpty.cs" t="Include" />
+            <e p="PublisherFlatMap.cs" t="Include" />
+            <e p="PublisherFlattenEnumerable.cs" t="Include" />
+            <e p="PublisherFromObservable.cs" t="Include" />
+            <e p="PublisherFromTask.cs" t="Include" />
+            <e p="PublisherFunc.cs" t="Include" />
+            <e p="PublisherGenerate.cs" t="Include" />
+            <e p="PublisherGroupBy.cs" t="Include" />
+            <e p="PublisherHasElements.cs" t="Include" />
+            <e p="PublisherHide.cs" t="Include" />
+            <e p="PublisherIgnoreBoth.cs" t="Include" />
+            <e p="PublisherIgnoreElements.cs" t="Include" />
+            <e p="PublisherInterval.cs" t="Include" />
+            <e p="PublisherJust.cs" t="Include" />
+            <e p="PublisherLast.cs" t="Include" />
+            <e p="PublisherMap.cs" t="Include" />
+            <e p="PublisherMapError.cs" t="Include" />
+            <e p="PublisherMapNotification.cs" t="Include" />
+            <e p="PublisherMaterialize.cs" t="Include" />
+            <e p="PublisherMergeArray.cs" t="Include" />
+            <e p="PublisherNever.cs" t="Include" />
+            <e p="PublisherOnBackpressureBuffer.cs" t="Include" />
+            <e p="PublisherOnBackpressureDrop.cs" t="Include" />
+            <e p="PublisherOnBackpressureLatest.cs" t="Include" />
+            <e p="PublisherOnErrorResumeWith.cs" t="Include" />
+            <e p="PublisherOnTerminateDetach.cs" t="Include" />
+            <e p="PublisherPeek.cs" t="Include" />
+            <e p="PublisherProcess.cs" t="Include" />
+            <e p="PublisherPublishOn.cs" t="Include" />
+            <e p="PublisherPublishSelector.cs" t="Include" />
+            <e p="PublisherRange.cs" t="Include" />
+            <e p="PublisherReduce.cs" t="Include" />
+            <e p="PublisherReduceWith.cs" t="Include" />
+            <e p="PublisherSample.cs" t="Include" />
+            <e p="PublisherScan.cs" t="Include" />
+            <e p="PublisherScanWith.cs" t="Include" />
+            <e p="PublisherSingle.cs" t="Include" />
+            <e p="PublisherSkip.cs" t="Include" />
+            <e p="PublisherSkipLast.cs" t="Include" />
+            <e p="PublisherSkipUntil.cs" t="Include" />
+            <e p="PublisherSkipWhile.cs" t="Include" />
+            <e p="PublisherSubscribeOn.cs" t="Include" />
+            <e p="PublisherSwitchIfEmpty.cs" t="Include" />
+            <e p="PublisherSwitchMap.cs" t="Include" />
+            <e p="PublisherTake.cs" t="Include" />
+            <e p="PublisherTakeLast.cs" t="Include" />
+            <e p="PublisherTakeLastOne.cs" t="Include" />
+            <e p="PublisherTakeUntil.cs" t="Include" />
+            <e p="PublisherTakeUntilPredicate.cs" t="Include" />
+            <e p="PublisherTakeWhile.cs" t="Include" />
+            <e p="PublisherTck.cs" t="Include" />
+            <e p="PublisherThen.cs" t="Include" />
+            <e p="PublisherTimeout.cs" t="Include" />
+            <e p="PublisherTimer.cs" t="Include" />
+            <e p="PublisherUsing.cs" t="Include" />
+            <e p="PublisherWithLatestFrom.cs" t="Include" />
+            <e p="PublisherWrap.cs" t="Include" />
+            <e p="PublisherZip.cs" t="Include" />
+            <e p="PublisherZipEnumerable.cs" t="Include" />
+          </e>
+          <e p="Scheduler" t="Include">
+            <e p="DefaultScheduler.cs" t="Include" />
+            <e p="ImmediateScheduler.cs" t="Include" />
+          </e>
+          <e p="Subscriber" t="Include">
+            <e p="BasicConditionalSubscriber.cs" t="Include" />
+            <e p="BasicFuseableConditionalSubscriber.cs" t="Include" />
+            <e p="BasicFuseableSubscriber.cs" t="Include" />
+            <e p="BasicPostCompleteSubscriber.cs" t="Include" />
+            <e p="BasicSubscriber.cs" t="Include" />
+            <e p="BlockingFirstSubscriber.cs" t="Include" />
+            <e p="BlockingLastSubscriber.cs" t="Include" />
+            <e p="CallbackSubscriber.cs" t="Include" />
+            <e p="DeferredScalarSubscriber.cs" t="Include" />
+            <e p="TaskCompleteSubscriber.cs" t="Include" />
+            <e p="TaskFirstSubscriber.cs" t="Include" />
+            <e p="TaskLastSubscriber.cs" t="Include" />
+            <e p="TestSubscriber.cs" t="Include" />
+          </e>
+          <e p="Subscription" t="Include">
+            <e p="BasicRejectingSubscription.cs" t="Include" />
+            <e p="DeferredScalarSubscription.cs" t="Include" />
+            <e p="EmptySubscription.cs" t="Include" />
+            <e p="NeverSubscription.cs" t="Include" />
+            <e p="ScalarSubscription.cs" t="Include" />
+            <e p="SubscriptionArbiterStruct.cs" t="Include" />
+            <e p="SubscriptionHelper.cs" t="Include" />
+          </e>
+          <e p="Timed.cs" t="Include" />
+          <e p="UnicastProcessor.cs" t="Include" />
+          <e p="Util" t="Include">
+            <e p="ArrayQueue.cs" t="Include" />
+            <e p="BackpressureHelper.cs" t="Include" />
+            <e p="DisposableHelper.cs" t="Include" />
+            <e p="FalseSharing.cs" t="Include" />
+            <e p="HalfSerializerStruct.cs" t="Include" />
+            <e p="IndexedMultipleDisposable.cs" t="Include" />
+            <e p="MultiSourceHelper.cs" t="Include" />
+            <e p="MultipleDisposable.cs" t="Include" />
+            <e p="ObjectHelper.cs" t="Include" />
+            <e p="OrderedItem.cs" t="Include" />
+            <e p="QueueDrainHelper.cs" t="Include" />
+            <e p="QueueHelper.cs" t="Include" />
+            <e p="SpscArrayQueue.cs" t="Include" />
+            <e p="SpscFreelistTracker.cs" t="Include" />
+            <e p="SpscLinkedArrayQueue.cs" t="Include" />
+            <e p="SpscOneQueue.cs" t="Include" />
+            <e p="TrackingArray.cs" t="Include" />
+          </e>
+          <e p="Void.cs" t="Include" />
+          <e p="bin" t="ExcludeRecursive" />
+          <e p="obj" t="ExcludeRecursive">
+            <e p="Debug" t="Include">
+              <e p="netstandard2.0" t="Include">
+                <e p="AuxiliaryStack.Reactor.Core.AssemblyInfo.cs" t="Include" />
+              </e>
+            </e>
+          </e>
+        </e>
+      </e>
+      <e p="tests" t="Include">
+        <e p="AuxiliaryStack.Reactor.Core.Test" t="IncludeRecursive">
+          <e p="AllTest.cs" t="Include" />
+          <e p="AnyTest.cs" t="Include" />
+          <e p="AuxiliaryStack.Reactor.Core.Test.csproj" t="IncludeRecursive" />
+          <e p="BufferBoundaryTest.cs" t="Include" />
+          <e p="BufferTest.cs" t="Include" />
+          <e p="ConcatMapTest.cs" t="Include" />
+          <e p="DefaultIfEmptyTest.cs" t="Include" />
+          <e p="DelaySubscriptionTest.cs" t="Include" />
+          <e p="DirectProcessorTest.cs" t="Include" />
+          <e p="FilterTest.cs" t="Include" />
+          <e p="FlatMapTest.cs" t="Include" />
+          <e p="FlattenEnumerableTest.cs" t="Include" />
+          <e p="FromEnumerable.cs" t="Include" />
+          <e p="GroupByTest.cs" t="Include" />
+          <e p="HasElementsTest.cs" t="Include" />
+          <e p="JustTest.cs" t="Include" />
+          <e p="MapNotificationTest.cs" t="Include" />
+          <e p="MaterializeTest.cs" t="Include" />
+          <e p="OnBackpressureBufferTest.cs" t="Include" />
+          <e p="OnBackpressureLatestTest.cs" t="Include" />
+          <e p="OnErrorResumeWith.cs" t="Include" />
+          <e p="ParallelTest.cs" t="Include" />
+          <e p="ProcessTest.cs" t="Include" />
+          <e p="PublishOnTest.cs" t="Include" />
+          <e p="PublishProcessorTest.cs" t="Include" />
+          <e p="PublishSelectorTest.cs" t="Include" />
+          <e p="ReduceTest.cs" t="Include" />
+          <e p="SampleTest.cs" t="Include" />
+          <e p="ScanTest.cs" t="Include" />
+          <e p="SingleTest.cs" t="Include" />
+          <e p="SkipLastTest.cs" t="Include" />
+          <e p="SkipTest.cs" t="Include" />
+          <e p="SkipUntilTest.cs" t="Include" />
+          <e p="SkipWhileTest.cs" t="Include" />
+          <e p="SubscribeOnTest.cs" t="Include" />
+          <e p="SwitchIfEmptyTest.cs" t="Include" />
+          <e p="SwitchMapTest.cs" t="Include" />
+          <e p="TakeLastTest.cs" t="Include" />
+          <e p="TakeTest.cs" t="Include" />
+          <e p="TakeUntilPredicateTest.cs" t="Include" />
+          <e p="TakeUntilTest.cs" t="Include" />
+          <e p="TakeWhileTest.cs" t="Include" />
+          <e p="Tck" t="Include">
+            <e p="ConcatTckTest.cs" t="Include" />
+            <e p="FluxPublisherVerification.cs" t="Include" />
+          </e>
+          <e p="ThenManyTest.cs" t="Include" />
+          <e p="ThenTest.cs" t="Include" />
+          <e p="TimeoutTest.cs" t="Include" />
+          <e p="ToEnumerableTest.cs" t="Include" />
+          <e p="UnicastProcessorTest.cs" t="Include" />
+          <e p="UsingTest.cs" t="Include" />
+          <e p="WithLatestFromTest.cs" t="Include" />
+          <e p="ZipEnumerableTest.cs" t="Include" />
+          <e p="ZipTest.cs" t="Include" />
+          <e p="app.config" t="Include" />
+          <e p="bin" t="ExcludeRecursive" />
+          <e p="obj" t="ExcludeRecursive">
+            <e p="Debug" t="Include">
+              <e p="netcoreapp2.1" t="Include">
+                <e p="AuxiliaryStack.Reactor.Core.Test.AssemblyInfo.cs" t="Include" />
+                <e p="AuxiliaryStack.Reactor.Core.Test.Program.cs" t="Include" />
+              </e>
+            </e>
+          </e>
+        </e>
+      </e>
+    </e>
+  </component>
+</project>

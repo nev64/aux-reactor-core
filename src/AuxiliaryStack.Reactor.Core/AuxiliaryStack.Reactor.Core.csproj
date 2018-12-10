@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Reactive.Streams" Version="1.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="AuxiliaryStack.Reactor.Core.csproj.DotSettings" />
+  </ItemGroup>
+
+</Project>
