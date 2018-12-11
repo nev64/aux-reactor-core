@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 
@@ -19,7 +20,7 @@ namespace AuxiliaryStack.Reactor.Core.Util
         /// <returns></returns>
         public static long AddCap(long a, long b)
         {
-            long u = a + b;
+            var u = a + b;
             if (u < 0)
             {
                 return long.MaxValue;
@@ -35,7 +36,7 @@ namespace AuxiliaryStack.Reactor.Core.Util
         /// <returns>The product of <paramref name="a"/> and <paramref name="b"/> capped at <see cref="long.MaxValue"/></returns>
         public static long MultiplyCap(long a, long b)
         {
-            long c = a * b;
+            var c = a * b;
 
             if (((a | b) >> 31) != 0L)
             {
@@ -57,23 +58,21 @@ namespace AuxiliaryStack.Reactor.Core.Util
         /// <returns>The previous value of the requested field</returns>
         public static long GetAndAddCap(ref long requested, long n)
         {
-            long r = Volatile.Read(ref requested);
+            var r = Volatile.Read(ref requested);
             for (;;)
             {
                 if (r == long.MaxValue)
                 {
                     return long.MaxValue;
                 }
-                long u = AddCap(r, n);
-                long v = Interlocked.CompareExchange(ref requested, u, r);
+                var u = AddCap(r, n);
+                var v = Interlocked.CompareExchange(ref requested, u, r);
                 if (v == r)
                 {
                     return v;
                 }
-                else
-                {
-                    r = v;
-                }
+
+                r = v;
             }
         }
 
@@ -91,27 +90,26 @@ namespace AuxiliaryStack.Reactor.Core.Util
         /// <returns>The new field value after the subtraction.</returns>
         public static long Produced(ref long requested, long n)
         {
-            long r = Volatile.Read(ref requested);
+            var r = Volatile.Read(ref requested);
             for (;;)
             {
                 if (r == long.MaxValue)
                 {
                     return long.MaxValue;
                 }
-                long u = r - n;
+                var u = r - n;
                 if (u < 0)
                 {
                     ReportMoreProduced(u);
                     u = 0;
                 }
-                long v = Interlocked.CompareExchange(ref requested, u, r);
+                var v = Interlocked.CompareExchange(ref requested, u, r);
                 if (v == r)
                 {
                     return u;
-                } else
-                {
-                    r = v;
                 }
+
+                r = v;
             }
         }
 
@@ -203,33 +201,30 @@ namespace AuxiliaryStack.Reactor.Core.Util
         /// <param name="requested">The requested field.</param>
         /// <param name="n">The request amount, positive (not validated).</param>
         /// <param name="s">The target ISubscriber</param>
-        /// <param name="queue">The queue to drain.</param>
+        /// <param name="flow">The queue to drain.</param>
         /// <param name="cancelled">The cancelled field</param>
         /// <returns>True if in post-complete mode.</returns>
-        public static bool PostCompleteRequest<T>(ref long requested, long n, ISubscriber<T> s, IQueue<T> queue, ref bool cancelled)
+        public static bool PostCompleteRequest<T>(ref long requested, long n, ISubscriber<T> s, IFlow<T> flow, ref bool cancelled)
         {
-            long r = Volatile.Read(ref requested);
+            var r = Volatile.Read(ref requested);
             for (;;)
             {
-                long c = r & COMPLETE_MASK;
-                long u = r & REQUESTED_MASK;
+                var c = r & COMPLETE_MASK;
+                var u = r & REQUESTED_MASK;
 
-                long v = AddCap(u, n) | c;
+                var v = AddCap(u, n) | c;
 
-                long w = Interlocked.CompareExchange(ref requested, v, r);
+                var w = Interlocked.CompareExchange(ref requested, v, r);
                 if (w == r)
                 {
                     if (r == COMPLETE_MASK)
                     {
-                        PostCompleteDrain(ref requested, s, queue, ref cancelled);
+                        PostCompleteDrain(ref requested, s, flow, ref cancelled);
                     }
                     return c != 0L;
                 }
-                else
-                {
-                    r = w;
-                }
 
+                r = w;
             }
         }
 
@@ -242,24 +237,24 @@ namespace AuxiliaryStack.Reactor.Core.Util
         /// <typeparam name="T">The value type</typeparam>
         /// <param name="requested">The requested field.</param>
         /// <param name="s">The ISubscriber</param>
-        /// <param name="queue">The queue</param>
+        /// <param name="flow">The queue</param>
         /// <param name="cancelled">The cancelled field.</param>
-        public static void PostComplete<T>(ref long requested, ISubscriber<T> s, IQueue<T> queue, ref bool cancelled)
+        public static void PostComplete<T>(ref long requested, ISubscriber<T> s, IFlow<T> flow, ref bool cancelled)
         {
-            long r = Volatile.Read(ref requested);
+            var r = Volatile.Read(ref requested);
             for (;;)
             {
                 if ((r & COMPLETE_MASK) != 0)
                 {
                     return;
                 }
-                long u = r | COMPLETE_MASK;
-                long v = Interlocked.CompareExchange(ref requested, u, r);
+                var u = r | COMPLETE_MASK;
+                var v = Interlocked.CompareExchange(ref requested, u, r);
                 if (v == r)
                 {
                     if (r != 0L)
                     {
-                        PostCompleteDrain(ref requested, s, queue, ref cancelled);
+                        PostCompleteDrain(ref requested, s, flow, ref cancelled);
                     }
                     return;
                 }
@@ -270,7 +265,7 @@ namespace AuxiliaryStack.Reactor.Core.Util
             }
         }
 
-        static void PostCompleteDrain<T>(ref long requested, ISubscriber<T> s, IQueue<T> queue, ref bool cancelled)
+        static void PostCompleteDrain<T>(ref long requested, ISubscriber<T> s, IFlow<T> flow, ref bool cancelled)
         {
             long r = Volatile.Read(ref requested);
             long e = COMPLETE_MASK;
@@ -280,15 +275,15 @@ namespace AuxiliaryStack.Reactor.Core.Util
                 {
                     if (Volatile.Read(ref cancelled))
                     {
-                        queue.Clear();
+                        flow.Clear();
                         return;
                     }
 
-                    T t;
+                    Option<T> elem = flow.Poll();
 
-                    if (queue.Poll(out t))
+                    if (elem.IsJust)
                     {
-                        s.OnNext(t);
+                        s.OnNext(elem.GetValue());
                         e++;
                     }
                     else
@@ -302,11 +297,11 @@ namespace AuxiliaryStack.Reactor.Core.Util
                 {
                     if (Volatile.Read(ref cancelled))
                     {
-                        queue.Clear();
+                        flow.Clear();
                         return;
                     }
 
-                    if (queue.IsEmpty())
+                    if (flow.IsEmpty())
                     {
                         s.OnComplete();
                         return;

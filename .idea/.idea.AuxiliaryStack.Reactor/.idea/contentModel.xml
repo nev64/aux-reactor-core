@@ -55,8 +55,8 @@
             <e p="FuseableHelper.cs" t="Include" />
             <e p="ICallable.cs" t="Include" />
             <e p="IConditionalSubscriber.cs" t="Include" />
-            <e p="IQueue.cs" t="Include" />
-            <e p="IQueueSubscription.cs" t="Include" />
+            <e p="IFlow.cs" t="Include" />
+            <e p="IFlowSubscription.cs" t="Include" />
             <e p="IScalarCallable.cs" t="Include" />
           </e>
           <e p="Flux.cs" t="Include" />
@@ -206,7 +206,7 @@
           <e p="Timed.cs" t="Include" />
           <e p="UnicastProcessor.cs" t="Include" />
           <e p="Util" t="Include">
-            <e p="ArrayQueue.cs" t="Include" />
+            <e p="ArrayFlow.cs" t="Include" />
             <e p="BackpressureHelper.cs" t="Include" />
             <e p="DisposableHelper.cs" t="Include" />
             <e p="FalseSharing.cs" t="Include" />
@@ -218,10 +218,10 @@
             <e p="OrderedItem.cs" t="Include" />
             <e p="QueueDrainHelper.cs" t="Include" />
             <e p="QueueHelper.cs" t="Include" />
-            <e p="SpscArrayQueue.cs" t="Include" />
+            <e p="SpscArrayFlow.cs" t="Include" />
             <e p="SpscFreelistTracker.cs" t="Include" />
-            <e p="SpscLinkedArrayQueue.cs" t="Include" />
-            <e p="SpscOneQueue.cs" t="Include" />
+            <e p="SpscLinkedArrayFlow.cs" t="Include" />
+            <e p="SpscOneFlow.cs" t="Include" />
             <e p="TrackingArray.cs" t="Include" />
           </e>
           <e p="Void.cs" t="Include" />

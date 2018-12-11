@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -33,9 +34,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 8)]
-        internal abstract class BaseOnBackpressureBufferSubscriber : ISubscriber<T>, IQueueSubscription<T>
+        internal abstract class BaseOnBackpressureBufferSubscriber : ISubscriber<T>, IFlowSubscription<T>
         {
-            protected readonly IQueue<T> queue;
+            protected readonly IFlow<T> _flow;
 
             ISubscription s;
 
@@ -57,7 +58,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             internal BaseOnBackpressureBufferSubscriber(int capacityHint)
             {
-                this.queue = new SpscLinkedArrayQueue<T>(capacityHint);
+                this._flow = new SpscLinkedArrayFlow<T>(capacityHint);
             }
 
             public void OnSubscribe(ISubscription s)
@@ -74,7 +75,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public void OnNext(T t)
             {
-                queue.Offer(t);
+                _flow.Offer(t);
                 Drain();
             }
 
@@ -106,19 +107,16 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
-            {
-                return queue.Poll(out value);
-            }
+            public Option<T> Poll() => _flow.Poll();
 
             public bool IsEmpty()
             {
-                return queue.IsEmpty();
+                return _flow.IsEmpty();
             }
 
             public void Clear()
             {
-                queue.Clear();
+                _flow.Clear();
             }
 
             public void Request(long n)
@@ -135,7 +133,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 Volatile.Write(ref cancelled, true);
                 if (QueueDrainHelper.Enter(ref wip))
                 {
-                    queue.Clear();
+                    _flow.Clear();
                 }
             }
 
@@ -172,7 +170,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 int missed = 1;
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 for (;;)
                 {
@@ -212,7 +210,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 int missed = 1;
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 for (;;)
                 {
@@ -231,7 +229,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         T t;
 
-                        bool empty = !q.Poll(out t);
+                        var elem = q.Poll();
+                        bool empty = elem.IsNone;
 
                         if (d && empty)
                         {
@@ -252,6 +251,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             break;
                         }
 
+                        t = elem.GetValue();
                         a.OnNext(t);
 
                         e++;
@@ -316,7 +316,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 int missed = 1;
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 for (;;)
                 {
@@ -356,7 +356,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 int missed = 1;
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 for (;;)
                 {
@@ -374,8 +374,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         bool d = Volatile.Read(ref done);
 
                         T t;
-
-                        bool empty = !q.Poll(out t);
+                        var elem = q.Poll();
+                        bool empty = elem.IsNone;
 
                         if (d && empty)
                         {
@@ -396,6 +396,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             break;
                         }
 
+                        t = elem.GetValue();
                         if (a.TryOnNext(t))
                         {
                             e++;

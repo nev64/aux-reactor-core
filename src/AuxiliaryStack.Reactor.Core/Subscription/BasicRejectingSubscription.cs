@@ -1,4 +1,6 @@
-﻿using AuxiliaryStack.Reactor.Core.Flow;
+﻿using AuxiliaryStack.Monads;
+using AuxiliaryStack.Reactor.Core.Flow;
+using static AuxiliaryStack.Monads.Option;
 
 namespace AuxiliaryStack.Reactor.Core.Subscription
 {
@@ -6,7 +8,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
     /// A IQueueuSubscription that reject all fusion.
     /// </summary>
     /// <typeparam name="T">The output value type</typeparam>
-    internal abstract class BasicRejectingSubscription<T> : IQueueSubscription<T>
+    internal abstract class BasicRejectingSubscription<T> : IFlowSubscription<T>
     {
         public abstract void Cancel();
 
@@ -25,10 +27,9 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
             return FuseableHelper.DontCallOffer();
         }
 
-        public bool Poll(out T value)
+        public Option<T> Poll()
         {
-            value = default(T);
-            return false;
+            return None<T>();
         }
 
         public abstract void Request(long n);

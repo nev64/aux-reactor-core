@@ -61,7 +61,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             readonly ITimedWorker worker;
 
-            readonly IQueue<BufferWork> queue;
+            readonly IFlow<BufferWork> _flow;
 
             IndexedMultipeDisposableStruct d;
 
@@ -88,7 +88,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 this.maxSize = maxSize;
                 this.timespan = timespan;
                 this.worker = worker;
-                this.queue = new SpscLinkedArrayQueue<BufferWork>(capacityHint);
+                this._flow = new SpscLinkedArrayFlow<BufferWork>(capacityHint);
                 this.buffer = new List<T>();
             }
 
@@ -100,7 +100,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 if (QueueDrainHelper.Enter(ref wip))
                 {
-                    queue.Clear();
+                    _flow.Clear();
                     buffer = null;
                 }
             }
@@ -112,7 +112,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 bw.type = BufferWorkType.COMPLETE;
                 lock (this)
                 {
-                    queue.Offer(bw);
+                    _flow.Offer(bw);
                 }
                 Drain();
             }
@@ -130,7 +130,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 bw.value = t;
                 lock (this)
                 {
-                    queue.Offer(bw);
+                    _flow.Offer(bw);
                 }
                 Drain();
             }
@@ -169,7 +169,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     bw.index = index;
                     lock (this)
                     {
-                        queue.Offer(bw);
+                        _flow.Offer(bw);
                     }
                     Drain();
                 }
@@ -183,7 +183,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
 
                 int missed = 1;
-                var q = queue;
+                var q = _flow;
                 var a = actual;
                 var buf = buffer;
 
@@ -208,8 +208,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         BufferWork bw;
 
-                        if (q.Poll(out bw))
+                        var elem = q.Poll();
+                        if (elem.IsJust)
                         {
+                            bw = elem.GetValue();
                             switch (bw.type)
                             {
                                 case BufferWorkType.COMPLETE:

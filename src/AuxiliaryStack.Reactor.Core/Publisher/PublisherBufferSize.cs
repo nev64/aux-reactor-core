@@ -184,7 +184,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             readonly int skip;
 
-            ArrayQueue<IList<T>> lists;
+            ArrayFlow<IList<T>> lists;
 
             int consumed;
 
@@ -200,7 +200,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 this.size = size;
                 this.skip = skip;
-                this.lists = new ArrayQueue<IList<T>>();
+                this.lists = new ArrayFlow<IList<T>>();
             }
 
             public override void OnComplete()
@@ -228,11 +228,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     ls.Offer(new List<T>());
                 }
 
-                int m = ls.mask;
-                var a = ls.array;
-                long pi = ls.producerIndex;
+                int m = ls._mask;
+                var a = ls._array;
+                long pi = ls._producerIndex;
 
-                for (long i = ls.consumerIndex; i != pi; i++)
+                for (long i = ls._consumerIndex; i != pi; i++)
                 {
                     int offset = (int)i & m;
 

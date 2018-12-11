@@ -1,4 +1,6 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
+using AuxiliaryStack.Monads.Extensions;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 
@@ -25,17 +27,17 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             }
         }
 
-        abstract class BaseOnTerminateDetachSubscriber : IQueueSubscription<T>
+        abstract class BaseOnTerminateDetachSubscriber : IFlowSubscription<T>
         {
             ISubscription s;
 
-            IQueueSubscription<T> qs;
+            IFlowSubscription<T> qs;
 
             public void OnSubscribe(ISubscription s)
             {
                 if (SubscriptionHelper.Validate(ref this.s, s))
                 {
-                    qs = s as IQueueSubscription<T>;
+                    qs = s as IFlowSubscription<T>;
 
                     subscribeActual();
                 }
@@ -58,16 +60,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
-            {
-                var qs = this.qs;
-                if (qs != null)
-                {
-                    return qs.Poll(out value);
-                }
-                value = default(T);
-                return false;
-            }
+            public Option<T> Poll() =>
+                this.qs.ToOption()
+                    .Bind(_ => _.Poll());
 
             public bool IsEmpty()
             {

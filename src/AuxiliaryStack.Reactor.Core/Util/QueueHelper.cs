@@ -28,11 +28,11 @@ namespace AuxiliaryStack.Reactor.Core.Util
         /// </summary>
         /// <typeparam name="T">The value type.</typeparam>
         /// <param name="q">The source queue.</param>
-        internal static void Clear<T>(IQueue<T> q)
+        internal static void Clear<T>(IFlow<T> q)
         {
-            T dummy;
-
-            while (q.Poll(out dummy) && !q.IsEmpty()) ;
+            while (q.Poll().IsJust && !q.IsEmpty())
+            {
+            }
         }
     }
 }

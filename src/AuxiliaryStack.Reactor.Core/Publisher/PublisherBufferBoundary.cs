@@ -70,14 +70,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             bool cancelled;
 
-            IQueue<BufferWork> queue;
+            IFlow<BufferWork> _flow;
 
             public BufferBoundarySubscriber(ISubscriber<IList<T>> actual, int capacityHint)
             {
                 this.actual = actual;
                 this.other = new BufferBoundaryOtherSubscriber(this);
                 this.buffer = new List<T>();
-                this.queue = new SpscLinkedArrayQueue<BufferWork>(capacityHint);
+                this._flow = new SpscLinkedArrayFlow<BufferWork>(capacityHint);
             }
 
             internal void otherNext()
@@ -87,7 +87,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 lock (this)
                 {
-                    queue.Offer(b);
+                    _flow.Offer(b);
                 }
                 Drain();
             }
@@ -111,7 +111,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 lock (this)
                 {
-                    queue.Offer(b);
+                    _flow.Offer(b);
                 }
                 Drain();
             }
@@ -123,7 +123,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 lock (this)
                 {
-                    queue.Offer(b);
+                    _flow.Offer(b);
                 }
                 Drain();
             }
@@ -149,7 +149,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 lock (this)
                 {
-                    queue.Offer(b);
+                    _flow.Offer(b);
                 }
                 Drain();
             }
@@ -163,7 +163,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 int missed = 1;
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 var current = buffer;
 
@@ -203,8 +203,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         BufferWork b;
 
-                        if (q.Poll(out b))
+                        var elem = q.Poll();
+                        if (elem.IsJust)
                         {
+                            b = elem.GetValue();
                             switch (b.type)
                             {
                                 case BufferWorkType.BOUNDARY:

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -93,7 +94,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             {
                 foreach (var a in subscribers)
                 {
-                    a.queue = null;
+                    a._flow = null;
                 }
             }
 
@@ -209,17 +210,18 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                         foreach (var inner in array)
                         {
-                            var q = Volatile.Read(ref inner.queue);
+                            var q = Volatile.Read(ref inner._flow);
 
                             if (q != null)
                             {
-                                T v;
+                                Option<T> elem;
 
                                 bool hasValue;
 
                                 try
                                 {
-                                    hasValue = q.Poll(out v);
+                                    elem = q.Poll();
+                                    hasValue = elem.IsJust;
                                 }
                                 catch (Exception exc)
                                 {
@@ -234,7 +236,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                                 if (hasValue)
                                 {
                                     empty = false;
-                                    a.OnNext(v);
+                                    a.OnNext(elem.GetValue());
                                     inner.RequestOne();
                                     if (++e == r)
                                     {
@@ -286,7 +288,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                         foreach (var inner in array)
                         {
-                            var q = Volatile.Read(ref inner.queue);
+                            var q = Volatile.Read(ref inner._flow);
                             if (q != null && !q.IsEmpty())
                             {
                                 empty = false;
@@ -326,7 +328,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                 bool done;
 
-                internal IQueue<T> queue;
+                internal IFlow<T> _flow;
 
                 long produced;
 
@@ -371,14 +373,14 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                 {
                     if (SubscriptionHelper.SetOnce(ref this.s, s))
                     {
-                        var qs = s as IQueueSubscription<T>;
+                        var qs = s as IFlowSubscription<T>;
                         if (qs != null)
                         {
                             int m = qs.RequestFusion(FuseableHelper.ANY);
                             if (m == FuseableHelper.SYNC)
                             {
                                 fusionMode = m;
-                                Volatile.Write(ref queue, qs);
+                                Volatile.Write(ref _flow, qs);
                                 Volatile.Write(ref done, true);
                                 parent.InnerComplete();
                                 return;
@@ -386,7 +388,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                             if (m == FuseableHelper.ASYNC)
                             {
                                 fusionMode = m;
-                                Volatile.Write(ref queue, qs);
+                                Volatile.Write(ref _flow, qs);
                             }
                         }
 
@@ -394,13 +396,13 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                     }
                 }
 
-                internal IQueue<T> Queue()
+                internal IFlow<T> Queue()
                 {
-                    var q = Volatile.Read(ref queue);
+                    var q = Volatile.Read(ref _flow);
                     if (q == null)
                     {
                         q = QueueDrainHelper.CreateQueue<T>(prefetch);
-                        Volatile.Write(ref queue, q);
+                        Volatile.Write(ref _flow, q);
                     }
                     return q;
                 }

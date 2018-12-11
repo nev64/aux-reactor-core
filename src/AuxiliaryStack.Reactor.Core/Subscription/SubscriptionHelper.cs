@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Subscription
@@ -68,7 +70,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// <param name="current">The target field</param>
         /// <param name="s">The new ISubscription instance to set</param>
         /// <returns>True if successful, false if the target field is not empty</returns>
-        public static bool Validate<T>(ref IQueueSubscription<T> current, IQueueSubscription<T> s)
+        public static bool Validate<T>(ref IFlowSubscription<T> current, IFlowSubscription<T> s)
         {
             if (s == null)
             {
@@ -79,7 +81,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
             if (current != null)
             {
                 s.Cancel();
-                if (current != CancelledQueueSubscription<T>.Instance)
+                if (current != CancelledFlowSubscription<T>.Instance)
                 {
                     ReportSubscriptionSet();
                 }
@@ -250,10 +252,10 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// <summary>
         /// Class representing a no-op cancelled ISubscription.
         /// </summary>
-        internal sealed class CancelledQueueSubscription<T> : IQueueSubscription<T>
+        internal sealed class CancelledFlowSubscription<T> : IFlowSubscription<T>
         {
 
-            internal static readonly CancelledQueueSubscription<T> Instance = new CancelledQueueSubscription<T>();
+            internal static readonly CancelledFlowSubscription<T> Instance = new CancelledFlowSubscription<T>();
 
             public void Cancel()
             {
@@ -275,11 +277,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
-            {
-                value = default(T);
-                return false;
-            }
+            public Option<T> Poll() => None<T>();
 
             public void Request(long n)
             {

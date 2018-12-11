@@ -1,6 +1,8 @@
 ﻿using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
+using static AuxiliaryStack.Monads.Option;
 
 /* 
  * The algorithm was inspired by the Fast-Flow implementation in the JCTools library at
@@ -17,7 +19,7 @@ namespace AuxiliaryStack.Reactor.Core.Util
     /// </summary>
     /// <typeparam name="T">The stored value type</typeparam>
     [StructLayout(LayoutKind.Sequential, Pack = 8)]
-    public sealed class SpscLinkedArrayQueue<T> : IQueue<T>
+    public sealed class SpscLinkedArrayFlow<T> : IFlow<T>
     {
         readonly int mask;
 
@@ -38,7 +40,7 @@ namespace AuxiliaryStack.Reactor.Core.Util
         /// the next power-of-2 value.
         /// </summary>
         /// <param name="capacity">The target capacity.</param>
-        public SpscLinkedArrayQueue(int capacity)
+        public SpscLinkedArrayFlow(int capacity)
         {
             int c = QueueHelper.Round(capacity < 2 ? 2 : capacity);
             mask = c - 1;
@@ -77,7 +79,7 @@ namespace AuxiliaryStack.Reactor.Core.Util
         }
 
         /// <inheritdoc/>
-        public bool Poll(out T value)
+        public Option<T> Poll()
         {
             var a = consumerArray;
             int m = mask;
@@ -89,14 +91,14 @@ namespace AuxiliaryStack.Reactor.Core.Util
 
             if (f == 0)
             {
-                value = default(T);
-                return false;
+                return None<T>();
             }
-            else
+
+            T value;
             if (f == 1)
             {
                 value = a[offset].value;
-                a[offset].value = default(T);
+                a[offset].value = default;
                 a[offset].Flag = 0;
             } else
             {
@@ -109,7 +111,7 @@ namespace AuxiliaryStack.Reactor.Core.Util
             }
 
             Volatile.Write(ref consumerIndex, ci + 1);
-            return true;
+            return Just(value);
         }
 
         /// <inheritdoc/>

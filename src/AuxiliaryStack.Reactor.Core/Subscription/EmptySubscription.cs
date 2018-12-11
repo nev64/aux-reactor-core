@@ -1,5 +1,7 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Subscription
@@ -8,20 +10,16 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
     /// Represents an empty subscription that ignores requests and cancellation.
     /// </summary>
     /// <typeparam name="T">The value type (no value is emitted)</typeparam>
-    public sealed class EmptySubscription<T> : IQueueSubscription<T>
+    public sealed class EmptySubscription<T> : IFlowSubscription<T>
     {
-
         private EmptySubscription()
         {
-
         }
-
-        private static readonly EmptySubscription<T> INSTANCE = new EmptySubscription<T>();
 
         /// <summary>
         /// Returns the singleton instance of the EmptySubscription class.
         /// </summary>
-        public static EmptySubscription<T> Instance { get { return INSTANCE; } }
+        public static EmptySubscription<T> Instance { get; } = new EmptySubscription<T>();
 
         /// <summary>
         /// Sets the empty instance on the ISubscriber and calls OnError with the Exception.
@@ -57,23 +55,13 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         }
 
         /// <inheritdoc />
-        public bool IsEmpty()
-        {
-            return true;
-        }
+        public bool IsEmpty() => true;
 
         /// <inheritdoc />
-        public bool Offer(T value)
-        {
-            return FuseableHelper.DontCallOffer();
-        }
+        public bool Offer(T value) => FuseableHelper.DontCallOffer();
 
         /// <inheritdoc />
-        public bool Poll(out T value)
-        {
-            value = default(T);
-            return false;
-        }
+        public Option<T> Poll() => None<T>();
 
         /// <inheritdoc />
         public void Request(long n)
@@ -82,9 +70,6 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         }
 
         /// <inheritdoc />
-        public int RequestFusion(int mode)
-        {
-            return mode & FuseableHelper.ASYNC;
-        }
+        public int RequestFusion(int mode) => mode & FuseableHelper.ASYNC;
     }
 }

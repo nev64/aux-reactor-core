@@ -1,4 +1,6 @@
-﻿using AuxiliaryStack.Reactor.Core.Flow;
+﻿using AuxiliaryStack.Monads;
+using AuxiliaryStack.Reactor.Core.Flow;
+using static AuxiliaryStack.Monads.Option;
 
 namespace AuxiliaryStack.Reactor.Core.Subscription
 {
@@ -6,7 +8,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
     /// Represents an empty subscription that ignores requests and cancellation.
     /// </summary>
     /// <typeparam name="T">The value type (no value is emitted)</typeparam>
-    public sealed class NeverSubscription<T> : IQueueSubscription<T>
+    public sealed class NeverSubscription<T> : IFlowSubscription<T>
     {
 
         private NeverSubscription()
@@ -47,11 +49,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         }
 
         /// <inheritdoc />
-        public bool Poll(out T value)
-        {
-            value = default(T);
-            return false;
-        }
+        public Option<T> Poll() => None<T>();
 
         /// <inheritdoc />
         public void Request(long n)

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -47,7 +49,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             }
         }
 
-        internal abstract class GenerateBaseSubscription : IQueueSubscription<T>, ISignalEmitter<T>
+        internal abstract class GenerateBaseSubscription : IFlowSubscription<T>, ISignalEmitter<T>
         {
             protected readonly Func<S, ISignalEmitter<T>, S> generator;
 
@@ -123,7 +125,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
                 if (terminated)
                 {
@@ -133,8 +135,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     {
                         throw ex;
                     }
-                    value = default(T);
-                    return false;
+                    return None<T>();
                 }
 
                 state = generator(state, this);
@@ -142,8 +143,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 if (hasValue)
                 {
                     hasValue = false;
-                    value = this.value;
-                    return true;
+                    return Just(value);
                 }
                 if (terminated)
                 {
@@ -153,8 +153,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     {
                         throw ex;
                     }
-                    value = default(T);
-                    return false;
+                    return None<T>();
                 }
                 throw new InvalidOperationException("The generator didn't produce any signal");
             }

@@ -1,4 +1,5 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
 using AuxiliaryStack.Reactor.Core.Subscription;
@@ -94,9 +95,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 actual.OnNext(t);
             }
 
-            public override bool Poll(out R value)
+            public override Option<R> Poll()
             {
-                return qs.Poll(out value);
+                return qs.Poll();
             }
 
             public override int RequestFusion(int mode)
@@ -149,9 +150,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 actual.OnNext(t);
             }
 
-            public override bool Poll(out R value)
+            public override Option<R> Poll()
             {
-                return qs.Poll(out value);
+                return qs.Poll();
             }
 
             public override int RequestFusion(int mode)

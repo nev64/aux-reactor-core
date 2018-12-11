@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -64,7 +66,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             SpscFreelistTracker<FlatMapInnerSubscriber> tracker;
 
-            IQueue<R> scalarQueue;
+            IFlow<R> _scalarFlow;
 
             int scalarConsumed;
 
@@ -119,7 +121,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 if (QueueDrainHelper.Enter(ref wip))
                 {
-                    var sq = Volatile.Read(ref scalarQueue);
+                    var sq = Volatile.Read(ref _scalarFlow);
                     sq?.Clear();
                 }
             }
@@ -270,20 +272,20 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            IQueue<R> GetOrCreateScalarQueue()
+            IFlow<R> GetOrCreateScalarQueue()
             {
-                var q = Volatile.Read(ref scalarQueue);
+                var q = Volatile.Read(ref _scalarFlow);
                 if (q == null)
                 {
                     if (maxConcurrency == int.MaxValue)
                     {
-                        q = new SpscLinkedArrayQueue<R>(prefetch);
+                        q = new SpscLinkedArrayFlow<R>(prefetch);
                     }
                     else
                     {
-                        q = new SpscArrayQueue<R>(maxConcurrency);
+                        q = new SpscArrayFlow<R>(maxConcurrency);
                     }
-                    Volatile.Write(ref scalarQueue, q);
+                    Volatile.Write(ref _scalarFlow, q);
                 }
                 return q;
             }
@@ -349,7 +351,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     long e = 0;
                     bool d;
 
-                    var sq = Volatile.Read(ref scalarQueue);
+                    var sq = Volatile.Read(ref _scalarFlow);
 
                     if (sq != null)
                     {
@@ -362,9 +364,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                             R v;
 
-                            if (sq.Poll(out v))
+                            var elem = sq.Poll();
+                            if (elem.IsJust)
                             {
-                                a.OnNext(v);
+                                a.OnNext(elem.GetValue());
 
                                 e++;
                             }
@@ -390,7 +393,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         if (inner != null)
                         {
                             d = inner.lvDone();
-                            IQueue<R> q = inner.GetQueue();
+                            IFlow<R> q = inner.GetQueue();
 
                             if (q == null || q.IsEmpty())
                             {
@@ -413,10 +416,12 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                                     R v;
 
                                     bool hasValue;
+                                    Option<R> elem;
 
                                     try
                                     {
-                                        hasValue = q.Poll(out v);
+                                        elem = q.Poll();
+                                        hasValue = elem.IsJust;
                                     }
                                     catch (Exception ex)
                                     {
@@ -430,10 +435,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                                         }
                                         d = true;
                                         hasValue = false;
-                                        v = default(R);
+                                        elem = None<R>();
                                     }
                                     if (hasValue)
                                     {
+                                        v = elem.GetValue();
                                         a.OnNext(v);
 
                                         e++;
@@ -476,7 +482,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                     n = tracker.Size();
 
-                    sq = Volatile.Read(ref scalarQueue);
+                    sq = Volatile.Read(ref _scalarFlow);
 
                     if (d && n == 0 && (sq == null || sq.IsEmpty()))
                     {
@@ -516,7 +522,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (lvCancelled())
                 {
-                    var sq = Volatile.Read(ref scalarQueue);
+                    var sq = Volatile.Read(ref _scalarFlow);
                     sq?.Clear();
                     return true;
                 }
@@ -527,7 +533,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     if (ex != null)
                     {
                         ex = ExceptionHelper.Terminate(ref error);
-                        var sq = Volatile.Read(ref scalarQueue);
+                        var sq = Volatile.Read(ref _scalarFlow);
                         sq?.Clear();
 
                         a.OnError(ex);
@@ -617,7 +623,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             ISubscription s;
 
-            IQueue<R> queue;
+            IFlow<R> _flow;
 
             bool done;
 
@@ -636,14 +642,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (SubscriptionHelper.SetOnce(ref this.s, s))
                 {
-                    var qs = s as IQueueSubscription<R>;
+                    var qs = s as IFlowSubscription<R>;
                     if (qs != null)
                     {
                         int m = qs.RequestFusion(FuseableHelper.ANY);
                         if (m == FuseableHelper.SYNC)
                         {
                             fusionMode = m;
-                            queue = qs;
+                            _flow = qs;
                             Volatile.Write(ref done, true);
 
                             parent.Drain();
@@ -653,7 +659,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         if (m == FuseableHelper.ASYNC)
                         {
                             fusionMode = m;
-                            queue = qs;
+                            _flow = qs;
 
                             s.Request(prefetch < 0 ? long.MaxValue : prefetch);
 
@@ -661,7 +667,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
                     }
 
-                    queue = QueueDrainHelper.CreateQueue<R>(prefetch);
+                    _flow = QueueDrainHelper.CreateQueue<R>(prefetch);
 
                     s.Request(prefetch < 0 ? long.MaxValue : prefetch);
                 }
@@ -707,23 +713,23 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             internal void Clear()
             {
-                queue.Clear();
+                _flow.Clear();
             }
 
-            internal IQueue<R> GetOrCreateQueue()
+            internal IFlow<R> GetOrCreateQueue()
             {
-                var q = Volatile.Read(ref queue);
+                var q = Volatile.Read(ref _flow);
                 if (q == null)
                 {
                     q = QueueDrainHelper.CreateQueue<R>(prefetch);
-                    Volatile.Write(ref queue, q);
+                    Volatile.Write(ref _flow, q);
                 }
                 return q;
             }
 
-            internal IQueue<R> GetQueue()
+            internal IFlow<R> GetQueue()
             {
-                return Volatile.Read(ref queue);
+                return Volatile.Read(ref _flow);
             }
             
             internal bool lvDone()

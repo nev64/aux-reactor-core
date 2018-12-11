@@ -47,7 +47,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             ISubscription s;
 
-            IQueue<T> queue;
+            IFlow<T> _flow;
 
             int sourceMode;
 
@@ -85,7 +85,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (SubscriptionHelper.SetOnce(ref this.s, s))
                 {
-                    var qs = s as IQueueSubscription<T>;
+                    var qs = s as IFlowSubscription<T>;
                     if (qs != null)
                     {
                         int m = qs.RequestFusion(FuseableHelper.ANY | FuseableHelper.BOUNDARY);
@@ -93,7 +93,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         if (m == FuseableHelper.SYNC)
                         {
                             this.sourceMode = m;
-                            this.queue = qs;
+                            this._flow = qs;
                             Volatile.Write(ref done, true);
                             return;
                         }
@@ -101,7 +101,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         if (m == FuseableHelper.ASYNC)
                         {
                             this.sourceMode = m;
-                            this.queue = qs;
+                            this._flow = qs;
 
                             s.Request(prefetch < 0 ? long.MaxValue : prefetch);
 
@@ -110,7 +110,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
                     }
 
-                    queue = QueueDrainHelper.CreateQueue<T>(prefetch);
+                    _flow = QueueDrainHelper.CreateQueue<T>(prefetch);
 
                     s.Request(prefetch < 0 ? long.MaxValue : prefetch);
                 }
@@ -125,7 +125,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 if (sourceMode != FuseableHelper.ASYNC)
                 {
-                    if (!queue.Offer(t))
+                    if (!_flow.Offer(t))
                     {
                         s.Cancel();
                         OnError(BackpressureHelper.MissingBackpressureException());
@@ -177,7 +177,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     bool d = Volatile.Read(ref done);
 
-                    bool empty = !queue.Poll(out current);
+                    var elem = _flow.Poll();
+                    
+                    bool empty = elem.IsNone;
 
                     if (d && empty)
                     {
@@ -203,6 +205,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     }
                     else
                     {
+                        current = elem.GetValue();
                         if (sourceMode != FuseableHelper.SYNC)
                         {
                             int c = consumed + 1;

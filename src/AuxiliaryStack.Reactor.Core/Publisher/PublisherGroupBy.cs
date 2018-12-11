@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -19,9 +20,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
         readonly int prefetch;
 
-        internal PublisherGroupBy(IPublisher<T> source, 
+        internal PublisherGroupBy(IPublisher<T> source,
             Func<T, K> keySelector,
-            Func<T, V> valueSelector, 
+            Func<T, V> valueSelector,
             int prefetch)
         {
             this.source = source;
@@ -36,7 +37,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 8)]
-        sealed class GroupBySubscriber : ISubscriber<T>, IQueueSubscription<IGroupedFlux<K, V>>
+        sealed class GroupBySubscriber : ISubscriber<T>, IFlowSubscription<IGroupedFlux<K, V>>
         {
             readonly ISubscriber<IGroupedFlux<K, V>> actual;
 
@@ -46,7 +47,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             readonly int prefetch;
 
-            readonly IQueue<IGroupedFlux<K, V>> queue;
+            readonly IFlow<IGroupedFlux<K, V>> _flow;
 
             ISubscription s;
 
@@ -81,7 +82,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 this.prefetch = prefetch;
                 this.groupCount = 1;
                 this.groups = new Dictionary<K, GroupUnicast>();
-                this.queue = new SpscLinkedArrayQueue<IGroupedFlux<K, V>>(prefetch);
+                this._flow = new SpscLinkedArrayFlow<IGroupedFlux<K, V>>(prefetch);
             }
 
             internal void InnerConsumed(long n)
@@ -105,6 +106,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     return;
                 }
+
                 K key;
 
                 V value;
@@ -147,7 +149,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 if (newGroup)
                 {
-                    queue.Offer(g);
+                    _flow.Offer(g);
                     Drain();
                 }
             }
@@ -162,8 +164,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     {
                         return;
                     }
+
                     groups = null;
                 }
+
                 foreach (var u in g.Values)
                 {
                     u.OnError(e);
@@ -184,8 +188,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     {
                         return;
                     }
+
                     groups = null;
                 }
+
                 foreach (var u in g.Values)
                 {
                     u.OnComplete();
@@ -214,7 +220,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             internal void InnerCancelled(K key)
             {
-                lock(this)
+                lock (this)
                 {
                     var gs = groups;
                     if (gs != null && gs.ContainsKey(key))
@@ -222,6 +228,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         gs.Remove(key);
                     }
                 }
+
                 DoCancel();
             }
 
@@ -233,7 +240,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                     if (QueueDrainHelper.Enter(ref wip))
                     {
-                        queue.Clear();
+                        _flow.Clear();
                     }
                 }
             }
@@ -257,7 +264,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 int missed = 1;
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 for (;;)
                 {
@@ -276,7 +283,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         IGroupedFlux<K, V> t;
 
-                        bool empty = !q.Poll(out t);
+                        var elem = q.Poll();
+                        var empty = elem.IsNone;
 
                         if (d && empty)
                         {
@@ -289,6 +297,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 a.OnComplete();
                             }
+
                             return;
                         }
 
@@ -296,6 +305,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         {
                             break;
                         }
+
+                        t = elem.GetValue();
 
                         a.OnNext(t);
 
@@ -325,6 +336,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 a.OnComplete();
                             }
+
                             return;
                         }
                     }
@@ -335,6 +347,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         {
                             Interlocked.Add(ref requested, -e);
                         }
+
                         s.Request(e);
                     }
 
@@ -350,7 +363,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 int missed = 1;
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 for (;;)
                 {
@@ -375,6 +388,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         {
                             a.OnComplete();
                         }
+
                         return;
                     }
 
@@ -393,6 +407,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     outputFused = true;
                     return FuseableHelper.ASYNC;
                 }
+
                 return FuseableHelper.NONE;
             }
 
@@ -401,30 +416,30 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out IGroupedFlux<K, V> value)
+            public Option<IGroupedFlux<K, V>> Poll()
             {
-                return queue.Poll(out value);
+                return _flow.Poll();
             }
 
             public bool IsEmpty()
             {
-                return queue.IsEmpty();
+                return _flow.IsEmpty();
             }
 
             public void Clear()
             {
-                queue.Clear();
+                _flow.Clear();
             }
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 8)]
-        sealed class GroupUnicast : IGroupedFlux<K, V>, IQueueSubscription<V>
+        sealed class GroupUnicast : IGroupedFlux<K, V>, IFlowSubscription<V>
         {
             readonly GroupBySubscriber parent;
 
             readonly K key;
 
-            readonly IQueue<V> queue;
+            readonly IFlow<V> _flow;
 
             ISubscriber<V> regular;
 
@@ -452,17 +467,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public K Key
             {
-                get
-                {
-                    return key;
-                }
+                get { return key; }
             }
 
             internal GroupUnicast(GroupBySubscriber parent, K key, int prefetch)
             {
                 this.parent = parent;
                 this.key = key;
-                this.queue = new SpscLinkedArrayQueue<V>(prefetch);
+                this._flow = new SpscLinkedArrayFlow<V>(prefetch);
             }
 
             public void Subscribe(ISubscriber<V> s)
@@ -472,7 +484,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     s.OnSubscribe(this);
                     if (s is IConditionalSubscriber<V>)
                     {
-                        Volatile.Write(ref conditional, (IConditionalSubscriber<V>)s);
+                        Volatile.Write(ref conditional, (IConditionalSubscriber<V>) s);
                         if (Volatile.Read(ref cancelled) != 0)
                         {
                             conditional = null;
@@ -488,17 +500,19 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
                     }
+
                     Drain();
                 }
                 else
                 {
-                    EmptySubscription<V>.Error(s, new InvalidOperationException("The IGroupedFlux allows only a single ISubscriber!"));
+                    EmptySubscription<V>.Error(s,
+                        new InvalidOperationException("The IGroupedFlux allows only a single ISubscriber!"));
                 }
             }
 
             internal void OnNext(V v)
             {
-                queue.Offer(v);
+                _flow.Offer(v);
                 Drain();
             }
 
@@ -554,7 +568,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 int missed = 1;
                 var a = Volatile.Read(ref regular);
                 var b = Volatile.Read(ref conditional);
-                var q = queue;
+                var q = _flow;
 
                 for (;;)
                 {
@@ -563,7 +577,6 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                     if (a != null)
                     {
-
                         while (e != r)
                         {
                             if (Volatile.Read(ref cancelled) != 0)
@@ -577,7 +590,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                             V v;
 
-                            bool empty = !q.Poll(out v);
+                            var elem = q.Poll();
+                            bool empty = elem.IsNone;
 
                             if (d && empty)
                             {
@@ -591,6 +605,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                                 {
                                     a.OnComplete();
                                 }
+
                                 return;
                             }
 
@@ -599,6 +614,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                                 break;
                             }
 
+                            v = elem.GetValue();
                             a.OnNext(v);
 
                             e++;
@@ -629,6 +645,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                                 {
                                     a.OnComplete();
                                 }
+
                                 return;
                             }
                         }
@@ -639,6 +656,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 Interlocked.Add(ref requested, -e);
                             }
+
                             parent.InnerConsumed(e);
                         }
                     }
@@ -658,7 +676,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                             V v;
 
-                            bool empty = !q.Poll(out v);
+                            var elem = q.Poll();
+                            bool empty = elem.IsNone;
 
                             if (d && empty)
                             {
@@ -672,6 +691,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                                 {
                                     b.OnComplete();
                                 }
+
                                 return;
                             }
 
@@ -680,6 +700,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                                 break;
                             }
 
+                            v = elem.GetValue();
                             if (b.TryOnNext(v))
                             {
                                 e++;
@@ -711,6 +732,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                                 {
                                     b.OnComplete();
                                 }
+
                                 return;
                             }
                         }
@@ -722,6 +744,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         {
                             Interlocked.Add(ref requested, -e);
                         }
+
                         parent.InnerConsumed(e);
                     }
 
@@ -730,6 +753,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     {
                         break;
                     }
+
                     if (a == null && b == null)
                     {
                         a = Volatile.Read(ref regular);
@@ -748,7 +772,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 int missed = 1;
                 var a = Volatile.Read(ref regular);
                 var b = Volatile.Read(ref conditional);
-                var q = queue;
+                var q = _flow;
 
                 for (;;)
                 {
@@ -777,6 +801,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 a.OnComplete();
                             }
+
                             return;
                         }
                     }
@@ -806,6 +831,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 b.OnComplete();
                             }
+
                             return;
                         }
                     }
@@ -815,6 +841,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     {
                         break;
                     }
+
                     if (a == null && b == null)
                     {
                         a = Volatile.Read(ref regular);
@@ -830,6 +857,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     outputFused = true;
                     return FuseableHelper.ASYNC;
                 }
+
                 return FuseableHelper.NONE;
             }
 
@@ -838,10 +866,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out V value)
+            public Option<V> Poll()
             {
-                bool b = queue.Poll(out value);
-                if (b)
+                var elem = _flow.Poll();
+                if (elem.IsJust)
                 {
                     produced++;
                 }
@@ -854,17 +882,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         parent.InnerConsumed(p);
                     }
                 }
-                return b;
+
+                return elem;
             }
 
             public bool IsEmpty()
             {
-                return queue.IsEmpty();
+                return _flow.IsEmpty();
             }
 
             public void Clear()
             {
-                queue.Clear();
+                _flow.Clear();
             }
         }
     }

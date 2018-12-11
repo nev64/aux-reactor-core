@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 
@@ -30,7 +31,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             }
         }
 
-        sealed class ErrorSubscription : IQueueSubscription<T>
+        sealed class ErrorSubscription : IFlowSubscription<T>
         {
             readonly ISubscriber<T> actual;
 
@@ -66,7 +67,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
                 throw error;
             }
@@ -79,7 +80,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     {
                         if (fusionMode == FuseableHelper.ASYNC)
                         {
-                            actual.OnNext(default(T));
+                            actual.OnNext(default);
                         }
                         else
                         {

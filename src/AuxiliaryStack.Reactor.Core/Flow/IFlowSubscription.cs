@@ -6,7 +6,7 @@ namespace AuxiliaryStack.Reactor.Core.Flow
     /// A combination of an IQueue and an ISubscription to allow queue fusion.
     /// </summary>
     /// <typeparam name="T">The value type in the queue.</typeparam>
-    public interface IQueueSubscription<T> : IQueue<T>, ISubscription
+    public interface IFlowSubscription<T> : IFlow<T>, ISubscription
     {
         /// <summary>
         /// Indicate the intent to fuse two subsequent operators.

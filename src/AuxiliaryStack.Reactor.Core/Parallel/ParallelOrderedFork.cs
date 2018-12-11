@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -48,7 +49,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             ISubscription s;
 
-            IQueue<T> queue;
+            IFlow<T> _flow;
 
             bool done;
             Exception error;
@@ -85,7 +86,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             {
                 if (SubscriptionHelper.Validate(ref this.s, s))
                 {
-                    var qs = s as IQueueSubscription<T>;
+                    var qs = s as IFlowSubscription<T>;
                     if (qs != null)
                     {
                         int m = qs.RequestFusion(FuseableHelper.ANY);
@@ -93,7 +94,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                         if (m == FuseableHelper.SYNC)
                         {
                             sourceMode = m;
-                            queue = qs;
+                            _flow = qs;
                             Volatile.Write(ref done, true);
                             SetupSubscribers();
                             Drain();
@@ -102,14 +103,14 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                         if (m == FuseableHelper.ASYNC)
                         {
                             sourceMode = m;
-                            queue = qs;
+                            _flow = qs;
                             SetupSubscribers();
                             s.Request(prefetch < 0 ? long.MaxValue : prefetch);
                             return;
                         }
                     }
 
-                    queue = QueueDrainHelper.CreateQueue<T>(prefetch);
+                    _flow = QueueDrainHelper.CreateQueue<T>(prefetch);
 
                     SetupSubscribers();
 
@@ -140,7 +141,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                 s.Cancel();
                 if (QueueDrainHelper.Enter(ref wip))
                 {
-                    queue.Clear();
+                    _flow.Clear();
                 }
             }
 
@@ -162,7 +163,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             {
                 if (sourceMode == FuseableHelper.NONE)
                 {
-                    if (!queue.Offer(t))
+                    if (!_flow.Offer(t))
                     {
                         s.Cancel();
                         OnError(BackpressureHelper.MissingBackpressureException());
@@ -205,7 +206,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             void DrainSync()
             {
                 int missed = 1;
-                var q = queue;
+                var q = _flow;
                 var a = subscribers;
                 int n = a.Length;
                 var r = requests;
@@ -222,7 +223,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                     {
                         if (Volatile.Read(ref cancelled))
                         {
-                            queue.Clear();
+                            _flow.Clear();
                             return;
                         }
 
@@ -240,10 +241,11 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                         long ei = e[i];
                         if (Volatile.Read(ref r[i]) != ei)
                         {
-                            T v;
+                            Option<T> elem;
                             try
                             {
-                                empty = !q.Poll(out v);
+                                elem = q.Poll();
+                                empty = elem.IsNone;
                             }
                             catch (Exception ex)
                             {
@@ -265,7 +267,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                                 return;
                             }
 
-                            a[i].OnNext(new OrderedItem<T>(u++, v));
+                            a[i].OnNext(new OrderedItem<T>(u++, elem.GetValue()));
 
                             e[i] = ei + 1;
 
@@ -299,7 +301,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             void DrainAsync()
             {
                 int missed = 1;
-                var q = queue;
+                var q = _flow;
                 var a = subscribers;
                 int n = a.Length;
                 var r = requests;
@@ -316,7 +318,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                     {
                         if (Volatile.Read(ref cancelled))
                         {
-                            queue.Clear();
+                            _flow.Clear();
                             return;
                         }
 
@@ -354,10 +356,11 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                         long ei = e[i];
                         if (Volatile.Read(ref r[i]) != ei)
                         {
-                            T v;
+                            Option<T> elem;
                             try
                             {
-                                empty = !q.Poll(out v);
+                                elem = q.Poll();
+                                empty = elem.IsNone;
                             }
                             catch (Exception ex)
                             {
@@ -375,7 +378,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                                 break;
                             }
 
-                            a[i].OnNext(new OrderedItem<T>(u++, v));
+                            a[i].OnNext(new OrderedItem<T>(u++, elem.GetValue()));
 
                             e[i] = ei + 1;
 

@@ -1,6 +1,8 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -19,7 +21,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             source.Subscribe(new IgnoreElementsSubscriber(s));
         }
 
-        sealed class IgnoreElementsSubscriber : ISubscriber<T>, IQueueSubscription<R>
+        sealed class IgnoreElementsSubscriber : ISubscriber<T>, IFlowSubscription<R>
         {
             readonly ISubscriber<R> actual;
 
@@ -73,10 +75,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public bool Poll(out R value)
+            public Option<R> Poll()
             {
-                value = default(R);
-                return false;
+                return None<R>();
             }
 
             public void Request(long n)

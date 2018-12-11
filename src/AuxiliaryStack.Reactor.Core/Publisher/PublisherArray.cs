@@ -1,6 +1,8 @@
 ﻿using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Util;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -26,7 +28,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             }
         }
 
-        internal abstract class ArrayBaseSubscription : IQueueSubscription<T>
+        internal abstract class ArrayBaseSubscription : IFlowSubscription<T>
         {
             protected readonly T[] array;
 
@@ -61,18 +63,17 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
-                int i = index;
+                var i = index;
                 var a = array;
                 if (i != a.Length)
                 {
                     index = i + 1;
-                    value = a[i];
-                    return true;
+                    return Just(a[i]);
                 }
-                value = default(T);
-                return false;
+                
+                return None<T>();
             }
 
             public void Request(long n)

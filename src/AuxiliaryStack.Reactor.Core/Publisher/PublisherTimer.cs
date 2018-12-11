@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -27,7 +29,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             parent.SetFuture(scheduler.Schedule(parent.Run, delay));
         }
 
-        sealed class TimerSubscription : IQueueSubscription<long>
+        sealed class TimerSubscription : IFlowSubscription<long>
         {
             readonly ISubscriber<long> actual;
 
@@ -84,16 +86,15 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out long value)
+            public Option<long> Poll()
             {
                 if (available)
                 {
                     available = false;
-                    value = 0;
-                    return true;
+                    return Just(0L);
                 }
-                value = 0;
-                return false;
+                
+                return None<long>();
             }
 
             public void Request(long n)

@@ -1,4 +1,5 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -22,7 +23,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         {
             if (s is IConditionalSubscriber<T>)
             {
-                source.Subscribe(new SkipLastConditionalSubscriber((IConditionalSubscriber<T>)s, n));
+                source.Subscribe(new SkipLastConditionalSubscriber((IConditionalSubscriber<T>) s, n));
             }
             else
             {
@@ -36,7 +37,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             readonly long n;
 
-            readonly IQueue<T> queue;
+            readonly IFlow<T> _flow;
 
             ISubscription s;
 
@@ -46,7 +47,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 this.actual = actual;
                 this.n = n;
-                this.queue = new ArrayQueue<T>();
+                this._flow = new ArrayFlow<T>();
             }
 
             public void Cancel()
@@ -61,7 +62,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public void OnError(Exception e)
             {
-                queue.Clear();
+                _flow.Clear();
                 actual.OnError(e);
             }
 
@@ -70,15 +71,15 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 long z = size;
                 if (z != n)
                 {
-                    queue.Offer(t);
+                    _flow.Offer(t);
                     size = z + 1;
                 }
                 else
                 {
-                    T u;
-                    queue.Poll(out u);
-                    queue.Offer(t);
-                    actual.OnNext(u);
+                    //todo: check
+                    var u = _flow.Poll();
+                    _flow.Offer(t);
+                    actual.OnNext(u.GetValue(default(T)));
                 }
             }
 
@@ -104,7 +105,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             readonly long n;
 
-            readonly IQueue<T> queue;
+            readonly IFlow<T> _flow;
 
             ISubscription s;
 
@@ -114,7 +115,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 this.actual = actual;
                 this.n = n;
-                this.queue = new ArrayQueue<T>();
+                this._flow = new ArrayFlow<T>();
             }
 
             public void Cancel()
@@ -129,7 +130,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public void OnError(Exception e)
             {
-                queue.Clear();
+                _flow.Clear();
                 actual.OnError(e);
             }
 
@@ -138,15 +139,15 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 long z = size;
                 if (z != n)
                 {
-                    queue.Offer(t);
+                    _flow.Offer(t);
                     size = z + 1;
                 }
                 else
                 {
-                    T u;
-                    queue.Poll(out u);
-                    queue.Offer(t);
-                    actual.OnNext(u);
+                    var u= 
+                    _flow.Poll();
+                    _flow.Offer(t);
+                    actual.OnNext(u.GetValue(default(T)));
                 }
             }
 
@@ -155,14 +156,15 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 long z = size;
                 if (z != n)
                 {
-                    queue.Offer(t);
+                    _flow.Offer(t);
                     size = z + 1;
                     return true;
                 }
-                T u;
-                queue.Poll(out u);
-                queue.Offer(t);
-                return actual.TryOnNext(u);
+
+                //todo:check
+                Option<T> u =_flow.Poll();
+                _flow.Offer(t);
+                return actual.TryOnNext(u.GetValue(default(T)));
             }
 
             public void OnSubscribe(ISubscription s)

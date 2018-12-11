@@ -1,4 +1,5 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
 
@@ -71,18 +72,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             actual.OnNext(v);
         }
 
-        public override bool Poll(out R value)
-        {
-            T local;
-
-            if (qs.Poll(out local))
-            {
-                value = mapper(local);
-                return true;
-            }
-            value = default(R);
-            return false;
-        }
+        public override Option<R> Poll() =>
+            qs.Poll().Map(mapper);
 
         public override int RequestFusion(int mode)
         {
@@ -131,18 +122,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             actual.OnNext(v);
         }
 
-        public override bool Poll(out R value)
-        {
-            T local;
-
-            if (qs.Poll(out local))
-            {
-                value = mapper(local);
-                return true;
-            }
-            value = default(R);
-            return false;
-        }
+        public override Option<R> Poll() =>
+            qs.Poll().Map(mapper);
 
         public override int RequestFusion(int mode)
         {

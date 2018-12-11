@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -111,15 +113,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         d = d && (inr == null || inr.IsDone());
 
-                        R v;
-
-                        bool empty;
+                        Option<R> elem;
 
                         if (inr != null)
                         {
                             try
                             {
-                                empty = !inr.queue.Poll(out v);
+                                elem = inr._flow.Poll();
                             }
                             catch (Exception exc)
                             {
@@ -138,23 +138,22 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
                         else
                         {
-                            v = default(R);
-                            empty = true;
+                            elem = None<R>();
                         }
 
-                        if (d && empty)
+                        if (d && elem.IsNone)
                         {
                             inner = null;
                             a.OnComplete();
                             return;
                         }
 
-                        if (empty)
+                        if (elem.IsNone)
                         {
                             break;
                         }
 
-                        a.OnNext(v);
+                        a.OnNext(elem.GetValue());
 
                         e++;
                         inner.RequestOne();
@@ -184,7 +183,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         d = d && (inr == null || inr.IsDone());
 
-                        bool empty = inr == null || inr.queue.IsEmpty();
+                        bool empty = inr == null || inr._flow.IsEmpty();
 
                         if (d && empty)
                         {
@@ -367,7 +366,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             int fusionMode;
 
-            internal IQueue<R> queue;
+            internal IFlow<R> _flow;
 
             ISubscription s;
 
@@ -383,14 +382,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (SubscriptionHelper.SetOnce(ref this.s, s))
                 {
-                    var qs = s as IQueueSubscription<R>;
+                    var qs = s as IFlowSubscription<R>;
                     if (qs != null)
                     {
                         int m = qs.RequestFusion(FuseableHelper.ANY);
                         if (m == FuseableHelper.SYNC)
                         {
                             fusionMode = m;
-                            queue = qs;
+                            _flow = qs;
                             Volatile.Write(ref done, true);
 
                             parent.Drain();
@@ -399,7 +398,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         if (m == FuseableHelper.ASYNC)
                         {
                             fusionMode = m;
-                            queue = qs;
+                            _flow = qs;
 
                             s.Request(prefetch < 0 ? long.MaxValue : prefetch);
 
@@ -407,7 +406,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
                     }
 
-                    queue = QueueDrainHelper.CreateQueue<R>(prefetch);
+                    _flow = QueueDrainHelper.CreateQueue<R>(prefetch);
 
                     s.Request(prefetch < 0 ? long.MaxValue : prefetch);
                 }
@@ -417,7 +416,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (fusionMode != FuseableHelper.ASYNC)
                 {
-                    queue.Offer(t);
+                    _flow.Offer(t);
                 }
                 parent.InnerNext(index);
             }

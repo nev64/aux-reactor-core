@@ -23,7 +23,7 @@ namespace AuxiliaryStack.Reactor.Core
 
         ISubscription s;
 
-        IQueue<T> queue;
+        IFlow<T> _flow;
 
         int sourceMode;
 
@@ -106,14 +106,14 @@ namespace AuxiliaryStack.Reactor.Core
         {
             if (SubscriptionHelper.SetOnce(ref this.s, s))
             {
-                var qs = s as IQueueSubscription<T>;
+                var qs = s as IFlowSubscription<T>;
                 if (qs != null)
                 {
                     int m = qs.RequestFusion(FuseableHelper.ANY);
                     if (m == FuseableHelper.SYNC)
                     {
                         sourceMode = m;
-                        queue = qs;
+                        _flow = qs;
                         Volatile.Write(ref done, true);
                         Drain();
                         return;
@@ -121,7 +121,7 @@ namespace AuxiliaryStack.Reactor.Core
                     if (m == FuseableHelper.ASYNC)
                     {
                         sourceMode = m;
-                        queue = qs;
+                        _flow = qs;
 
                         s.Request(prefetch < 0 ? long.MaxValue : prefetch);
 
@@ -129,7 +129,7 @@ namespace AuxiliaryStack.Reactor.Core
                     }
                 }
 
-                queue = QueueDrainHelper.CreateQueue<T>(prefetch);
+                _flow = QueueDrainHelper.CreateQueue<T>(prefetch);
 
                 s.Request(prefetch < 0 ? long.MaxValue : prefetch);
             }
@@ -169,7 +169,7 @@ namespace AuxiliaryStack.Reactor.Core
 
             if (sourceMode == FuseableHelper.NONE)
             {
-                if (!queue.Offer(t))
+                if (!_flow.Offer(t))
                 {
                     SubscriptionHelper.Cancel(ref s);
                     OnError(BackpressureHelper.MissingBackpressureException());
@@ -218,7 +218,7 @@ namespace AuxiliaryStack.Reactor.Core
             }
 
             int missed = 1;
-            var q = queue;
+            var q = _flow;
 
             for (;;)
             {
@@ -240,11 +240,11 @@ namespace AuxiliaryStack.Reactor.Core
                     {
                         bool d = Volatile.Read(ref done);
 
-                        T v;
+                        
 
-                        bool empty = !q.Poll(out v);
+                        var elem = q.Poll();
 
-                        if (d && empty)
+                        if (d && elem.IsNone) 
                         {
                             var ex = Volatile.Read(ref error);
                             if (ex != null)
@@ -264,14 +264,14 @@ namespace AuxiliaryStack.Reactor.Core
                             return;
                         }
 
-                        if (empty)
+                        if (elem.IsNone)
                         {
                             break;
                         }
 
                         foreach (var a in array)
                         {
-                            a.actual.OnNext(v);
+                            a.actual.OnNext(elem.GetValue());
                         }
 
                         e++;

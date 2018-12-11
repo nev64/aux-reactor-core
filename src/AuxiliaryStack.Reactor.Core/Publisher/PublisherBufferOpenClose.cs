@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using AuxiliaryStack.Monads;
+using AuxiliaryStack.Monads.Extensions;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -63,7 +65,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             internal BufferCloseSubscriber buffer;
         }
 
-        sealed class BufferOpenCloseSubscriber : ISubscriber<T>, ISubscription, IQueue<IList<T>>
+        sealed class BufferOpenCloseSubscriber : ISubscriber<T>, ISubscription, IFlow<IList<T>>
         {
             readonly ISubscriber<IList<T>> actual;
 
@@ -71,7 +73,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             readonly Func<U, IPublisher<V>> close;
 
-            readonly IQueue<BufferWork> queue;
+            readonly IFlow<BufferWork> _flow;
 
             readonly LinkedList<BufferCloseSubscriber> buffers;
 
@@ -93,7 +95,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 this.actual = actual;
                 this.open = new BufferOpenSubscriber(this);
                 this.close = close;
-                this.queue = new SpscLinkedArrayQueue<BufferWork>(capacityHint);
+                this._flow = new SpscLinkedArrayFlow<BufferWork>(capacityHint);
                 this.buffers = new LinkedList<BufferCloseSubscriber>();
             }
 
@@ -115,7 +117,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         close.Cancel();
                     }
                     buffers.Clear();
-                    queue.Clear();
+                    _flow.Clear();
                 }
             }
 
@@ -127,7 +129,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 lock (this)
                 {
-                    queue.Offer(b);
+                    _flow.Offer(b);
                 }
                 Drain();
             }
@@ -152,7 +154,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 lock (this)
                 {
-                    queue.Offer(bw);
+                    _flow.Offer(bw);
                 }
 
                 Drain();
@@ -187,7 +189,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 lock (this)
                 {
-                    queue.Offer(b);
+                    _flow.Offer(b);
                 }
                 Drain();
             }
@@ -211,7 +213,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 lock (this)
                 {
-                    queue.Offer(b);
+                    _flow.Offer(b);
                 }
                 Drain();
             }
@@ -224,7 +226,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 lock (this)
                 {
-                    queue.Offer(b);
+                    _flow.Offer(b);
                 }
                 Drain();
             }
@@ -251,7 +253,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 int missed = 1;
                 var a = actual;
-                var q = queue;
+                var q = _flow;
                 var bs = buffers;
 
                 for (;;)
@@ -265,7 +267,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                                 close.Cancel();
                             }
                             buffers.Clear();
-                            queue.Clear();
+                            _flow.Clear();
                             return;
                         }
 
@@ -275,9 +277,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
 
                         BufferWork bw;
+                        var elem = q.Poll();
 
-                        if (q.Poll(out bw))
+                        if (elem.IsJust)
                         {
+                            bw = elem.GetValue();
                             switch (bw.type)
                             {
                                 case BufferWorkType.COMPLETE:
@@ -372,7 +376,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            bool HandleException(ISubscriber<IList<T>> a, IQueue<BufferWork> q)
+            bool HandleException(ISubscriber<IList<T>> a, IFlow<BufferWork> q)
             {
                 Exception ex = Volatile.Read(ref error);
                 if (ex != null)
@@ -407,19 +411,17 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out IList<T> value)
+            public Option<IList<T>> Poll()
             {
-                var bs = buffers;
-                var e = bs.First;
-                if (e == null)
-                {
-                    value = null;
-                    return false;
-                }
+                return buffers.First
+                    .ToOption()
+                    .Map(e =>
+                    {
+                        var value = e.Value.buffer;
+                        buffers.RemoveFirst();
+                        return value;
+                    });
 
-                value = e.Value.buffer;
-                bs.RemoveFirst();
-                return true;
             }
 
             public bool IsEmpty()

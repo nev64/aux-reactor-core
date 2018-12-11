@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -53,7 +55,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             }
         }
 
-        abstract class EnumerableBaseSubscription : IQueueSubscription<T>
+        abstract class EnumerableBaseSubscription : IFlowSubscription<T>
         {
             protected readonly IEnumerator<T> enumerator;
 
@@ -105,23 +107,21 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
                 if (empty)
                 {
-                    value = default(T);
-                    return false;
+                    return None<T>();
                 }
 
                 if (!enumerator.MoveNext())
                 {
                     empty = true;
-                    value = default(T);
                     Dispose(enumerator);
-                    return false;
+                    return None<T>();
                 }
-                value = enumerator.Current;
-                return true;
+                
+                return Just(enumerator.Current);
             }
 
             public void Request(long n)

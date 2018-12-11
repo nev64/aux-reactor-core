@@ -1,11 +1,12 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 
 
 namespace AuxiliaryStack.Reactor.Core.Subscriber
 {
-    internal abstract class BasicFuseableConditionalSubscriber<T, U> : IConditionalSubscriber<T>, IQueueSubscription<U>
+    internal abstract class BasicFuseableConditionalSubscriber<T, U> : IConditionalSubscriber<T>, IFlowSubscription<U>
     {
         /// <summary>
         /// The actual child ISubscriber.
@@ -19,7 +20,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// <summary>
         /// If not null, the upstream is fuseable.
         /// </summary>
-        protected IQueueSubscription<T> qs;
+        protected IFlowSubscription<T> qs;
 
         protected int fusionMode;
 
@@ -45,7 +46,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         {
             if (SubscriptionHelper.Validate(ref this.s, s))
             {
-                qs = s as IQueueSubscription<T>;
+                qs = s as IFlowSubscription<T>;
 
                 if (BeforeSubscribe())
                 {
@@ -126,7 +127,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
             return FuseableHelper.DontCallOffer();
         }
 
-        public abstract bool Poll(out U value);
+        public abstract Option<U> Poll();
 
         /// <inheritdoc/>
         public virtual bool IsEmpty()

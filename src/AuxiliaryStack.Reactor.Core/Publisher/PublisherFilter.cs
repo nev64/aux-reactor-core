@@ -1,6 +1,9 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
+using static AuxiliaryStack.Monads.Option;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -89,7 +92,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return b;
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 var qs = this.qs;
                 T local;
@@ -98,18 +101,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     for (;;)
                     {
-                        if (qs.Poll(out local))
+                        var elem = qs.Poll();
+                        if (elem.IsJust)
                         {
+                            local = elem.GetValue();
                             if (predicate(local))
                             {
-                                value = local;
-                                return true;
+                                return Just(local);
                             }
                         }
                         else
                         {
-                            value = default(T);
-                            return false;
+                            return None<T>();
                         }
                     }
                 }
@@ -118,16 +121,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     long p = 0;
                     for (;;)
                     {
-                        if (qs.Poll(out local))
+                        var elem = qs.Poll();
+                        if (elem.IsJust)
                         {
+                            local = elem.GetValue();
                             if (predicate(local))
                             {
                                 if (p != 0)
                                 {
                                     qs.Request(p);
                                 }
-                                value = local;
-                                return true;
+
+                                return Just(local);
                             }
                             p++;
                         }
@@ -137,8 +142,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 qs.Request(p);
                             }
-                            value = default(T);
-                            return false;
+                            return None<T>();
                         }
                     }
                 }
@@ -208,7 +212,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return b;
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 var qs = this.qs;
                 T local;
@@ -217,18 +221,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     for (;;)
                     {
-                        if (qs.Poll(out local))
+                        var elem = qs.Poll();
+                        if (elem.IsJust)
                         {
+                             local = elem.GetValue();
                             if (predicate(local))
                             {
-                                value = local;
-                                return true;
+                                return Just(local);
                             }
                         }
                         else
                         {
-                            value = default(T);
-                            return false;
+                            return None<T>();
                         }
                     }
                 }
@@ -237,16 +241,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     long p = 0;
                     for (;;)
                     {
-                        if (qs.Poll(out local))
+                        var elem = qs.Poll();
+                        if (elem.IsJust)
                         {
+                            local = elem.GetValue();
                             if (predicate(local))
                             {
                                 if (p != 0)
                                 {
                                     qs.Request(p);
                                 }
-                                value = local;
-                                return true;
+
+                                return Just(local);
                             }
                             p++;
                         }
@@ -256,8 +262,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 qs.Request(p);
                             }
-                            value = default(T);
-                            return false;
+                            
+                            return None<T>();
                         }
                     }
                 }

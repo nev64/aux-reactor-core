@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -83,7 +84,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 8)]
-        sealed class CombineLatestSubscription : IQueueSubscription<R>, IComineLatestParent
+        sealed class CombineLatestSubscription : IFlowSubscription<R>, IComineLatestParent
         {
             // COLD fields
 
@@ -95,7 +96,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             readonly Func<T[], R> combiner;
 
-            readonly IQueue<Entry> queue;
+            readonly IFlow<Entry> _flow;
 
             readonly CombineLatestSubscriber[] subscribers;
 
@@ -146,7 +147,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     a[i] = new CombineLatestSubscriber(this, i, prefetch);
                 }
                 this.subscribers = a;
-                this.queue = new SpscLinkedArrayQueue<Entry>(prefetch);
+                this._flow = new SpscLinkedArrayFlow<Entry>(prefetch);
             }
 
             public void Subscribe(IPublisher<T>[] sources, int n)
@@ -200,7 +201,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 var a = latest;
                 int n = a.Length;
                 Array.Clear(a, 0, n);
-                queue.Clear();
+                _flow.Clear();
             }
 
             public void InnerNext(CombineLatestSubscriber sender, int index, T value)
@@ -225,7 +226,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     {
                         T[] b = new T[n];
                         Array.Copy(a, 0, b, 0, n);
-                        queue.Offer(new Entry(b, sender));
+                        _flow.Offer(new Entry(b, sender));
                     }
                 }
 
@@ -267,7 +268,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 var a = actual;
                 var c = latest;
                 int n = c.Length;
-                var q = queue;
+                var q = _flow;
 
                 int missed = 1;
 
@@ -318,8 +319,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         bool d = Volatile.Read(ref complete) == n;
 
-                        Entry v;
-                        bool empty = !q.Poll(out v);
+                        var elem = q.Poll();
+                        bool empty = elem.IsNone;
 
                         if (d && empty)
                         {
@@ -328,6 +329,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
+                        Entry v = elem.GetValue();
                         R result;
 
                         try
@@ -399,7 +401,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 var a = actual;
                 var c = latest;
                 int n = c.Length;
-                var q = queue;
+                var q = _flow;
 
                 int missed = 1;
 
@@ -440,8 +442,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         bool d = Volatile.Read(ref complete) == n;
 
-                        Entry v;
-                        bool empty = !q.Poll(out v);
+                        var elem = q.Poll();
+                        bool empty = elem.IsNone;
 
                         if (d && empty)
                         {
@@ -460,6 +462,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
+                        var v = elem.GetValue();
                         R result;
 
                         try
@@ -530,7 +533,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 int missed = 1;
 
                 var a = actual;
-                var q = queue;
+                var q = _flow;
                 int n = latest.Length;
 
                 for (;;)
@@ -639,24 +642,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out R value)
-            {
-                Entry e;
-
-                if (queue.Poll(out e))
-                {
-                    value = combiner(e.row);
-
-                    e.sender.RequestOne();
-                    return true;
-                }
-                value = default(R);
-                return false;
-            }
+            public Option<R> Poll() =>
+                _flow.Poll()
+                    .Map(e =>
+                    {
+                        var value = combiner(e.row);
+                        e.sender.RequestOne();
+                        return value;
+                    });
 
             public bool IsEmpty()
             {
-                return queue.IsEmpty();
+                return _flow.IsEmpty();
             }
 
             public void Clear()
@@ -679,7 +676,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 8)]
-        sealed class CombineLatestConditionalSubscription : IQueueSubscription<R>, IComineLatestParent
+        sealed class CombineLatestConditionalSubscription : IFlowSubscription<R>, IComineLatestParent
         {
             // COLD fields
 
@@ -691,7 +688,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             readonly Func<T[], R> combiner;
 
-            readonly IQueue<Entry> queue;
+            readonly IFlow<Entry> _flow;
 
             readonly CombineLatestSubscriber[] subscribers;
 
@@ -742,7 +739,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     a[i] = new CombineLatestSubscriber(this, i, prefetch);
                 }
                 this.subscribers = a;
-                this.queue = new SpscLinkedArrayQueue<Entry>(prefetch);
+                this._flow = new SpscLinkedArrayFlow<Entry>(prefetch);
             }
 
             public void Subscribe(IPublisher<T>[] sources, int n)
@@ -796,7 +793,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 var a = latest;
                 int n = a.Length;
                 Array.Clear(a, 0, n);
-                queue.Clear();
+                _flow.Clear();
             }
 
             public void InnerNext(CombineLatestSubscriber sender, int index, T value)
@@ -822,7 +819,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     {
                         T[] b = new T[n];
                         Array.Copy(a, 0, b, 0, n);
-                        queue.Offer(new Entry(b, sender));
+                        _flow.Offer(new Entry(b, sender));
                     }
                 }
 
@@ -864,7 +861,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 var a = actual;
                 var c = latest;
                 int n = c.Length;
-                var q = queue;
+                var q = _flow;
 
                 int missed = 1;
 
@@ -915,8 +912,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         bool d = Volatile.Read(ref complete) == n;
 
-                        Entry v;
-                        bool empty = !q.Poll(out v);
+                        var elem = q.Poll();
+                        bool empty = !elem.IsNone;
 
                         if (d && empty)
                         {
@@ -926,6 +923,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
 
                         R result;
+                        var v = elem.GetValue();
 
                         try
                         {
@@ -997,7 +995,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 var a = actual;
                 var c = latest;
                 int n = c.Length;
-                var q = queue;
+                var q = _flow;
 
                 int missed = 1;
 
@@ -1038,8 +1036,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         bool d = Volatile.Read(ref complete) == n;
 
-                        Entry v;
-                        bool empty = !q.Poll(out v);
+                        var elem = q.Poll();
+                        bool empty = elem.IsNone;
 
                         if (d && empty)
                         {
@@ -1059,6 +1057,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
 
                         R result;
+                        var v = elem.GetValue();
 
                         try
                         {
@@ -1130,7 +1129,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 int missed = 1;
 
                 var a = actual;
-                var q = queue;
+                var q = _flow;
                 int n = latest.Length;
 
                 for (;;)
@@ -1239,24 +1238,17 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out R value)
-            {
-                Entry e;
-
-                if (queue.Poll(out e))
-                {
-                    value = combiner(e.row);
-
-                    e.sender.RequestOne();
-                    return true;
-                }
-                value = default(R);
-                return false;
-            }
+            public Option<R> Poll() =>
+                _flow.Poll()
+                    .Map(e =>
+                    {
+                        e.sender.RequestOne();
+                        return combiner(e.row);
+                    });
 
             public bool IsEmpty()
             {
-                return queue.IsEmpty();
+                return _flow.IsEmpty();
             }
 
             public void Clear()

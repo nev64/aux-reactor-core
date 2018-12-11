@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -68,7 +69,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             protected readonly int limit;
 
-            protected readonly IQueue<T> queue;
+            protected readonly IFlow<T> _flow;
 
             protected ISubscription s;
 
@@ -94,7 +95,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             {
                 this.prefetch = prefetch;
                 this.limit = prefetch - (prefetch >> 2);
-                this.queue = QueueDrainHelper.CreateQueue<T>(prefetch);
+                this._flow = QueueDrainHelper.CreateQueue<T>(prefetch);
                 this.worker = worker;
             }
 
@@ -112,7 +113,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             public void OnNext(T t)
             {
-                if (!queue.Offer(t))
+                if (!_flow.Offer(t))
                 {
                     s.Cancel();
                     OnError(BackpressureHelper.MissingBackpressureException());
@@ -150,7 +151,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                 if (QueueDrainHelper.Enter(ref wip))
                 {
-                    queue.Clear();
+                    _flow.Clear();
                 }
             }
 
@@ -184,7 +185,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             protected override void Run()
             {
-                var q = queue;
+                var q = _flow;
                 var a = actual;
                 int missed = 1;
                 int lim = limit;
@@ -217,9 +218,9 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                             }
                         }
 
-                        T v;
+                        var elem = q.Poll();
 
-                        bool empty = !q.Poll(out v);
+                        var empty = elem.IsNone;
 
                         if (d && empty)
                         {
@@ -234,7 +235,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                             break;
                         }
 
-                        a.OnNext(v);
+                        a.OnNext(elem.GetValue());
 
                         e++;
 
@@ -306,7 +307,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             protected override void Run()
             {
-                var q = queue;
+                var q = _flow;
                 var a = actual;
                 int missed = 1;
                 int lim = limit;
@@ -339,9 +340,9 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                             }
                         }
 
-                        T v;
+                        var elem = q.Poll();
 
-                        bool empty = !q.Poll(out v);
+                        bool empty = elem.IsNone;
 
                         if (d && empty)
                         {
@@ -356,7 +357,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                             break;
                         }
 
-                        if (a.TryOnNext(v))
+                        if (a.TryOnNext(elem.GetValue()))
                         {
                             e++;
                         }

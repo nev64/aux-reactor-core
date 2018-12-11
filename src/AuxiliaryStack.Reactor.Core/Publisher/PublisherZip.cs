@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
+using AuxiliaryStack.Monads.Extensions;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -281,8 +283,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             }
                             else
                             {
-                                if (inner.Poll(out c[i]))
+                                var elem = inner.Poll();
+                                if (elem.IsJust)
                                 {
+                                    c[i] = elem.GetValue();
                                     inner.HasValue(true);
                                     hasValue++;
                                 }
@@ -564,8 +568,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             }
                             else
                             {
-                                if (inner.Poll(out c[i]))
+                                var elem = inner.Poll();
+                                if (elem.IsJust)
                                 {
+                                    c[i] = elem.GetValue();
                                     inner.HasValue(true);
                                     hasValue++;
                                 }
@@ -665,7 +671,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             int consumed;
 
-            IQueue<T> queue;
+            IFlow<T> _flow;
 
             int fusionMode;
 
@@ -708,7 +714,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (SubscriptionHelper.SetOnce(ref this.s, s))
                 {
-                    var qs = s as IQueueSubscription<T>;
+                    var qs = s as IFlowSubscription<T>;
                     if (qs != null)
                     {
                         int m = qs.RequestFusion(FuseableHelper.ANY);
@@ -716,7 +722,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         {
                             fusionMode = m;
                             nonEmpty = !qs.IsEmpty();
-                            Volatile.Write(ref queue, qs);
+                            Volatile.Write(ref _flow, qs);
                             Volatile.Write(ref done, true);
 
                             parent.Drain();
@@ -726,7 +732,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         if (m == FuseableHelper.ASYNC)
                         {
                             fusionMode = m;
-                            Volatile.Write(ref queue, qs);
+                            Volatile.Write(ref _flow, qs);
 
                             s.Request(prefetch < 0 ? long.MaxValue : prefetch);
 
@@ -734,7 +740,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
                     }
 
-                    Volatile.Write(ref queue, QueueDrainHelper.CreateQueue<T>(prefetch));
+                    Volatile.Write(ref _flow, QueueDrainHelper.CreateQueue<T>(prefetch));
 
                     s.Request(prefetch < 0 ? long.MaxValue : prefetch);
                 }
@@ -748,7 +754,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
                 if (fusionMode != FuseableHelper.ASYNC)
                 {
-                    queue.Offer(t);
+                    _flow.Offer(t);
                 }
                 parent.Drain();
             }
@@ -776,19 +782,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             internal void Clear()
             {
-                queue = null;
+                _flow = null;
             }
 
-            internal bool Poll(out T value)
+            internal Option<T> Poll()
             {
-                var q = Volatile.Read(ref queue);
-                if (q != null)
-                {
-                    return q.Poll(out value);
-                }
-
-                value = default(T);
-                return false;
+                var q = Volatile.Read(ref _flow);
+                return q.ToOption()
+                    .Bind(_ => _.Poll());
             }
 
             internal bool NonEmpty()

@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Net.WebSockets;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -21,7 +24,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         {
             if (s is IConditionalSubscriber<T>)
             {
-                source.Subscribe(new SkipConditionalSubscriber((IConditionalSubscriber<T>)s, n));
+                source.Subscribe(new SkipConditionalSubscriber((IConditionalSubscriber<T>) s, n));
             }
             else
             {
@@ -59,32 +62,34 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     actual.OnNext(t);
                     return;
                 }
+
                 remaining = r - 1;
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 var qs = this.qs;
                 long r = remaining;
 
                 if (r == 0L)
                 {
-                    return qs.Poll(out value);
+                    return qs.Poll();
                 }
 
                 T local;
                 for (;;)
                 {
-                    if (!qs.Poll(out local))
+                    var elem = qs.Poll();
+                    if (elem.IsNone)
                     {
                         remaining = r;
-                        value = default(T);
-                        return false;
+                        return None<T>();
                     }
+
                     if (--r == 0)
                     {
                         remaining = 0;
-                        return qs.Poll(out value);
+                        return qs.Poll();
                     }
                 }
             }
@@ -130,6 +135,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     actual.OnNext(t);
                     return;
                 }
+
                 remaining = r - 1;
             }
 
@@ -140,33 +146,34 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     return actual.TryOnNext(t);
                 }
+
                 remaining = r - 1;
                 return true;
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 var qs = this.qs;
                 long r = remaining;
 
                 if (r == 0L)
                 {
-                    return qs.Poll(out value);
+                    return qs.Poll();
                 }
 
-                T local;
                 for (;;)
                 {
-                    if (!qs.Poll(out local))
+                    var elem = qs.Poll();
+                    if (elem.IsNone)
                     {
                         remaining = r;
-                        value = default(T);
-                        return false;
+                        return None<T>();
                     }
+
                     if (--r == 0)
                     {
                         remaining = 0;
-                        return qs.Poll(out value);
+                        return qs.Poll();
                     }
                 }
             }
@@ -181,6 +188,5 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 s.Request(n);
             }
         }
-
     }
 }

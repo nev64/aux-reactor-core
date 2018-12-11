@@ -1,4 +1,5 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
 
@@ -63,11 +64,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 actual.OnNext(t);
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 try
                 {
-                    return qs.Poll(out value);
+                    return qs.Poll();
                 }
                 catch (Exception ex)
                 {
@@ -133,11 +134,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return actual.TryOnNext(t);
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 try
                 {
-                    return qs.Poll(out value);
+                    return qs.Poll();
                 }
                 catch (Exception ex)
                 {

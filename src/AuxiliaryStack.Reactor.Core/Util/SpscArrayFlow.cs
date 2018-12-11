@@ -1,6 +1,9 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
+using static AuxiliaryStack.Monads.Option;
 
 
 /* 
@@ -17,7 +20,7 @@ namespace AuxiliaryStack.Reactor.Core.Util
     /// </summary>
     /// <typeparam name="T">The stored value type</typeparam>
     [StructLayout(LayoutKind.Sequential, Pack = 8)]
-    public sealed class SpscArrayQueue<T> : IQueue<T>
+    public sealed class SpscArrayFlow<T> : IFlow<T>
     {
         readonly Entry[] array;
 
@@ -38,12 +41,13 @@ namespace AuxiliaryStack.Reactor.Core.Util
         /// the next power-of-2 value.
         /// </summary>
         /// <param name="capacity">The target capacity.</param>
-        public SpscArrayQueue(int capacity)
+        public SpscArrayFlow(int capacity)
         {
             int c = QueueHelper.Round(capacity);
             mask = c - 1;
             array = new Entry[c];
-            Volatile.Write(ref consumerIndex, 0L); // FIXME not sure if C# constructor with readonly field does release or not
+            Volatile.Write(ref consumerIndex,
+                0L); // FIXME not sure if C# constructor with readonly field does release or not
         }
 
         /// <inheritdoc/>
@@ -53,7 +57,7 @@ namespace AuxiliaryStack.Reactor.Core.Util
             int m = mask;
             long pi = producerIndex;
 
-            int offset = (int)pi & m;
+            int offset = (int) pi & m;
 
             if (a[offset].Flag != 0)
             {
@@ -68,25 +72,24 @@ namespace AuxiliaryStack.Reactor.Core.Util
         }
 
         /// <inheritdoc/>
-        public bool Poll(out T value)
+        public Option<T> Poll()
         {
             var a = array;
-            int m = mask;
-            long ci = consumerIndex;
+            var m = mask;
+            var ci = consumerIndex;
 
-            int offset = (int)ci & m;
+            var offset = (int) ci & m;
 
             if (a[offset].Flag == 0)
             {
-                value = default(T);
-                return false;
+                return None<T>();
             }
 
-            value = a[offset].value;
-            a[offset].value = default(T);
+            var value = a[offset].value;
+            a[offset].value = default;
             a[offset].Flag = 0;
             Volatile.Write(ref consumerIndex, ci + 1);
-            return true;
+            return Just(value);
         }
 
         /// <inheritdoc/>
@@ -119,14 +122,8 @@ namespace AuxiliaryStack.Reactor.Core.Util
             /// </summary>
             internal int Flag
             {
-                get
-                {
-                    return Volatile.Read(ref flag);
-                }
-                set
-                {
-                    Volatile.Write(ref flag, value);
-                }
+                get { return Volatile.Read(ref flag); }
+                set { Volatile.Write(ref flag, value); }
             }
         }
 
@@ -152,14 +149,8 @@ namespace AuxiliaryStack.Reactor.Core.Util
             /// </summary>
             internal int Flag
             {
-                get
-                {
-                    return Volatile.Read(ref flag);
-                }
-                set
-                {
-                    Volatile.Write(ref flag, value);
-                }
+                get { return Volatile.Read(ref flag); }
+                set { Volatile.Write(ref flag, value); }
             }
         }
     }

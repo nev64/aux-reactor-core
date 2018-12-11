@@ -1,6 +1,8 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -56,11 +58,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         {
             if (s is IConditionalSubscriber<T>)
             {
-                source.Subscribe(new PeekConditionalSubscriber((IConditionalSubscriber<T>)s, onNext, onAfterNext, onError, onComplete, onTerminate, onAfterTerminate, onRequest, onSubscribe, onCancel));
+                source.Subscribe(new PeekConditionalSubscriber((IConditionalSubscriber<T>) s, onNext, onAfterNext,
+                    onError, onComplete, onTerminate, onAfterTerminate, onRequest, onSubscribe, onCancel));
             }
             else
             {
-                source.Subscribe(new PeekSubscriber(s, onNext, onAfterNext, onError, onComplete, onTerminate, onAfterTerminate, onRequest, onSubscribe, onCancel));
+                source.Subscribe(new PeekSubscriber(s, onNext, onAfterNext, onError, onComplete, onTerminate,
+                    onAfterTerminate, onRequest, onSubscribe, onCancel));
             }
         }
 
@@ -69,9 +73,16 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             PublisherPeek<T> p = source as PublisherPeek<T>;
             if (p != null)
             {
-                return new PublisherPeek<T>(p.source, v => { p.onNext(v); onNext(v); }, p.onAfterNext, p.onError, p.onComplete, p.onTerminate, p.onAfterTerminate, p.onRequest, p.onSubscribe, p.onCancel);
+                return new PublisherPeek<T>(p.source, v =>
+                    {
+                        p.onNext(v);
+                        onNext(v);
+                    }, p.onAfterNext, p.onError, p.onComplete, p.onTerminate, p.onAfterTerminate, p.onRequest,
+                    p.onSubscribe, p.onCancel);
             }
-            return new PublisherPeek<T>(source, onNext, v => { }, e => { }, () => { }, () => { }, () => { }, r => { }, s => { }, () => { });
+
+            return new PublisherPeek<T>(source, onNext, v => { }, e => { }, () => { }, () => { }, () => { }, r => { },
+                s => { }, () => { });
         }
 
         internal static PublisherPeek<T> withOnAfterNext(IPublisher<T> source, Action<T> onAfterNext)
@@ -79,9 +90,15 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             PublisherPeek<T> p = source as PublisherPeek<T>;
             if (p != null)
             {
-                return new PublisherPeek<T>(p.source, p.onNext, v => { p.onAfterNext(v); onAfterNext(v); }, p.onError, p.onComplete, p.onTerminate, p.onAfterTerminate, p.onRequest, p.onSubscribe, p.onCancel);
+                return new PublisherPeek<T>(p.source, p.onNext, v =>
+                {
+                    p.onAfterNext(v);
+                    onAfterNext(v);
+                }, p.onError, p.onComplete, p.onTerminate, p.onAfterTerminate, p.onRequest, p.onSubscribe, p.onCancel);
             }
-            return new PublisherPeek<T>(source, v => { }, onAfterNext, e => { }, () => { }, () => { }, () => { }, r => { }, s => { }, () => { });
+
+            return new PublisherPeek<T>(source, v => { }, onAfterNext, e => { }, () => { }, () => { }, () => { },
+                r => { }, s => { }, () => { });
         }
 
         internal static PublisherPeek<T> withOnError(IPublisher<T> source, Action<Exception> onError)
@@ -89,9 +106,15 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             PublisherPeek<T> p = source as PublisherPeek<T>;
             if (p != null)
             {
-                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, e => { p.onError(e); onError(e); }, p.onComplete, p.onTerminate, p.onAfterTerminate, p.onRequest, p.onSubscribe, p.onCancel);
+                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, e =>
+                {
+                    p.onError(e);
+                    onError(e);
+                }, p.onComplete, p.onTerminate, p.onAfterTerminate, p.onRequest, p.onSubscribe, p.onCancel);
             }
-            return new PublisherPeek<T>(source, v => { }, v => { }, onError, () => { }, () => { }, () => { }, r => { }, s => { }, () => { });
+
+            return new PublisherPeek<T>(source, v => { }, v => { }, onError, () => { }, () => { }, () => { }, r => { },
+                s => { }, () => { });
         }
 
         internal static PublisherPeek<T> withOnComplete(IPublisher<T> source, Action onComplete)
@@ -99,9 +122,15 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             PublisherPeek<T> p = source as PublisherPeek<T>;
             if (p != null)
             {
-                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, p.onError, () => { p.onComplete(); onComplete(); }, p.onTerminate, p.onAfterTerminate, p.onRequest, p.onSubscribe, p.onCancel);
+                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, p.onError, () =>
+                {
+                    p.onComplete();
+                    onComplete();
+                }, p.onTerminate, p.onAfterTerminate, p.onRequest, p.onSubscribe, p.onCancel);
             }
-            return new PublisherPeek<T>(source, v => { }, v => { }, e => { }, onComplete, () => { }, () => { }, r => { }, s => { }, () => { });
+
+            return new PublisherPeek<T>(source, v => { }, v => { }, e => { }, onComplete, () => { }, () => { },
+                r => { }, s => { }, () => { });
         }
 
         internal static PublisherPeek<T> withOnTerminate(IPublisher<T> source, Action onTerminate)
@@ -109,9 +138,15 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             PublisherPeek<T> p = source as PublisherPeek<T>;
             if (p != null)
             {
-                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, p.onError, p.onComplete, () => { p.onTerminate(); onTerminate(); }, p.onAfterTerminate, p.onRequest, p.onSubscribe, p.onCancel);
+                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, p.onError, p.onComplete, () =>
+                {
+                    p.onTerminate();
+                    onTerminate();
+                }, p.onAfterTerminate, p.onRequest, p.onSubscribe, p.onCancel);
             }
-            return new PublisherPeek<T>(source, v => { }, v => { }, e => { }, () => { }, onTerminate, () => { }, r => { }, s => { }, () => { });
+
+            return new PublisherPeek<T>(source, v => { }, v => { }, e => { }, () => { }, onTerminate, () => { },
+                r => { }, s => { }, () => { });
         }
 
         internal static PublisherPeek<T> withOnAfterTerminate(IPublisher<T> source, Action onAfterTerminate)
@@ -119,9 +154,16 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             PublisherPeek<T> p = source as PublisherPeek<T>;
             if (p != null)
             {
-                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, p.onError, p.onComplete, p.onTerminate, () => { p.onAfterTerminate(); onAfterTerminate(); }, p.onRequest, p.onSubscribe, p.onCancel);
+                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, p.onError, p.onComplete, p.onTerminate,
+                    () =>
+                    {
+                        p.onAfterTerminate();
+                        onAfterTerminate();
+                    }, p.onRequest, p.onSubscribe, p.onCancel);
             }
-            return new PublisherPeek<T>(source, v => { }, v => { }, e => { }, () => { }, () => { }, onAfterTerminate, r => { }, s => { }, () => { });
+
+            return new PublisherPeek<T>(source, v => { }, v => { }, e => { }, () => { }, () => { }, onAfterTerminate,
+                r => { }, s => { }, () => { });
         }
 
         internal static PublisherPeek<T> withOnRequest(IPublisher<T> source, Action<long> onRequest)
@@ -129,9 +171,16 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             PublisherPeek<T> p = source as PublisherPeek<T>;
             if (p != null)
             {
-                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, p.onError, p.onComplete, p.onTerminate, p.onAfterTerminate, r => { p.onRequest(r); onRequest(r); }, p.onSubscribe, p.onCancel);
+                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, p.onError, p.onComplete, p.onTerminate,
+                    p.onAfterTerminate, r =>
+                    {
+                        p.onRequest(r);
+                        onRequest(r);
+                    }, p.onSubscribe, p.onCancel);
             }
-            return new PublisherPeek<T>(source, v => { }, v => { }, e => { }, () => { }, () => { }, () => { }, onRequest, s => { }, () => { });
+
+            return new PublisherPeek<T>(source, v => { }, v => { }, e => { }, () => { }, () => { }, () => { },
+                onRequest, s => { }, () => { });
         }
 
         internal static PublisherPeek<T> withOnSubscribe(IPublisher<T> source, Action<ISubscription> onSubscribe)
@@ -139,9 +188,16 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             PublisherPeek<T> p = source as PublisherPeek<T>;
             if (p != null)
             {
-                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, p.onError, p.onComplete, p.onTerminate, p.onAfterTerminate, p.onRequest, s => { p.onSubscribe(s); onSubscribe(s); }, p.onCancel);
+                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, p.onError, p.onComplete, p.onTerminate,
+                    p.onAfterTerminate, p.onRequest, s =>
+                    {
+                        p.onSubscribe(s);
+                        onSubscribe(s);
+                    }, p.onCancel);
             }
-            return new PublisherPeek<T>(source, v => { }, v => { }, e => { }, () => { }, () => { }, () => { }, r => { }, onSubscribe, () => { });
+
+            return new PublisherPeek<T>(source, v => { }, v => { }, e => { }, () => { }, () => { }, () => { }, r => { },
+                onSubscribe, () => { });
         }
 
         internal static PublisherPeek<T> withOnCancel(IPublisher<T> source, Action onCancel)
@@ -149,9 +205,16 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             PublisherPeek<T> p = source as PublisherPeek<T>;
             if (p != null)
             {
-                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, p.onError, p.onComplete, p.onTerminate, p.onAfterTerminate, p.onRequest, p.onSubscribe, () => { p.onCancel(); onCancel(); });
+                return new PublisherPeek<T>(p.source, p.onNext, p.onAfterNext, p.onError, p.onComplete, p.onTerminate,
+                    p.onAfterTerminate, p.onRequest, p.onSubscribe, () =>
+                    {
+                        p.onCancel();
+                        onCancel();
+                    });
             }
-            return new PublisherPeek<T>(source, v => { }, v => { }, e => { }, () => { }, () => { }, () => { }, r => { }, s => { }, onCancel);
+
+            return new PublisherPeek<T>(source, v => { }, v => { }, e => { }, () => { }, () => { }, () => { }, r => { },
+                s => { }, onCancel);
         }
 
         sealed class PeekSubscriber : BasicFuseableSubscriber<T, T>
@@ -208,6 +271,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     ExceptionHelper.ThrowOrDrop(ex);
                 }
+
                 return true;
             }
 
@@ -217,7 +281,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     onComplete();
                     onTerminate();
-                } catch (Exception ex)
+                }
+                catch (Exception ex)
                 {
                     ExceptionHelper.ThrowIfFatal(ex);
                     Fail(ex);
@@ -278,7 +343,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 actual.OnNext(t);
 
-                try { 
+                try
+                {
                     onAfterNext(t);
                 }
                 catch (Exception ex)
@@ -286,7 +352,6 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     Fail(ex);
                     return;
                 }
-
             }
 
             public override int RequestFusion(int mode)
@@ -294,28 +359,26 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return TransitiveAnyFusion(mode);
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 if (fusionMode == FuseableHelper.SYNC)
                 {
+                    var elem = qs.Poll();
 
-                    T local;
-                    if (qs.Poll(out local))
+                    if (elem.IsJust)
                     {
+                        var local = elem.GetValue();
                         onNext(local);
-                        value = local;
-                        return true;
+                        return Just(local);
                     }
+
                     onComplete();
                     onTerminate();
                     onAfterTerminate();
-                    value = default(T);
-                    return false;
+                    return None<T>();
                 }
-                else
-                {
-                    return qs.Poll(out value);
-                }
+
+                return qs.Poll();
             }
 
             public override void Request(long n)
@@ -328,12 +391,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     ExceptionHelper.ThrowOrDrop(ex);
                 }
+
                 s.Request(n);
             }
 
             public override void Cancel()
             {
-                try { 
+                try
+                {
                     onCancel();
                 }
                 catch (Exception ex)
@@ -399,6 +464,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     ExceptionHelper.ThrowOrDrop(ex);
                 }
+
                 return true;
             }
 
@@ -479,7 +545,6 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     Fail(ex);
                     return;
                 }
-
             }
 
             public override bool TryOnNext(T t)
@@ -519,28 +584,25 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return TransitiveAnyFusion(mode);
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 if (fusionMode == FuseableHelper.SYNC)
                 {
-
-                    T local;
-                    if (qs.Poll(out local))
+                    var elem = qs.Poll();
+                    if (elem.IsJust)
                     {
+                        var local = elem.GetValue();
                         onNext(local);
-                        value = local;
-                        return true;
+                        return Just(local);
                     }
+
                     onComplete();
                     onTerminate();
                     onAfterTerminate();
-                    value = default(T);
-                    return false;
+                    return None<T>();
                 }
-                else
-                {
-                    return qs.Poll(out value);
-                }
+
+                return qs.Poll();
             }
 
             public override void Request(long n)
@@ -553,6 +615,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     ExceptionHelper.ThrowOrDrop(ex);
                 }
+
                 s.Request(n);
             }
 

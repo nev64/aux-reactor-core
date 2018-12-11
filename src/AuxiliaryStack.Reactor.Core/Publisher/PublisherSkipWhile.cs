@@ -1,6 +1,8 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -99,25 +101,23 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return false;
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 for (;;)
                 {
                     if (passThrough)
                     {
-                        return qs.Poll(out value);
+                        return qs.Poll();
                     }
 
-                    T t;
-                    bool b = qs.Poll(out t);
+                    var elem = qs.Poll();
 
-                    if (b)
+                    if (elem.IsJust)
                     {
-                        if (!predicate(t))
+                        if (!predicate(elem.GetValue()))
                         {
                             passThrough = true;
-                            value = t;
-                            return true;
+                            return elem;
                         }
                         else
                         {
@@ -128,8 +128,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
                     } else
                     {
-                        value = default(T);
-                        return false;
+                        return elem;
                     }
                 }
             }
@@ -205,25 +204,24 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return false;
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 for (;;)
                 {
                     if (passThrough)
                     {
-                        return qs.Poll(out value);
+                        return qs.Poll();
                     }
 
-                    T t;
-                    bool b = qs.Poll(out t);
+                    var elem = qs.Poll();
 
-                    if (b)
+                    if (elem.IsJust)
                     {
-                        if (!predicate(t))
+                        if (!predicate(elem.GetValue()))
                         {
                             passThrough = true;
-                            value = t;
-                            return true;
+
+                            return elem;
                         }
                         else
                         {
@@ -235,8 +233,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     }
                     else
                     {
-                        value = default(T);
-                        return false;
+                        return None<T>();
                     }
                 }
             }

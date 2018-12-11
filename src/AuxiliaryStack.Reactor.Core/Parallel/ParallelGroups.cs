@@ -49,7 +49,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             ISubscription s;
 
-            IQueue<T> queue;
+            IFlow<T> _flow;
 
             bool done;
             Exception error;
@@ -82,7 +82,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                 this.key = key;
                 this.prefetch = prefetch;
                 this.limit = prefetch - (prefetch >> 2);
-                this.queue = QueueDrainHelper.CreateQueue<T>(prefetch);
+                this._flow = QueueDrainHelper.CreateQueue<T>(prefetch);
             }
 
             public void Cancel()
@@ -93,7 +93,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                 if (QueueDrainHelper.Enter(ref wip))
                 {
                     actual = null;
-                    queue.Clear();
+                    _flow.Clear();
                 }
             }
 
@@ -112,7 +112,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             public void OnNext(T t)
             {
-                if (!queue.Offer(t))
+                if (!_flow.Offer(t))
                 {
                     Cancel();
                     OnError(BackpressureHelper.MissingBackpressureException("Queue full?!"));
@@ -164,7 +164,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                     return;
                 }
 
-                var q = queue;
+                var q = _flow;
                 var a = Volatile.Read(ref actual);
                 int missed = 1;
                 long e = emitted;
@@ -182,15 +182,15 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                             if (Volatile.Read(ref cancelled))
                             {
                                 actual = null;
-                                queue.Clear();
+                                _flow.Clear();
                                 return;
                             }
 
                             bool d = Volatile.Read(ref done);
 
-                            T t;
+                            var elem = q.Poll();
 
-                            bool empty = !q.Poll(out t);
+                            bool empty = elem.IsNone;
 
                             if (d && empty)
                             {
@@ -212,7 +212,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                                 break;
                             }
 
-                            a.OnNext(t);
+                            a.OnNext(elem.GetValue());
 
                             e++;
 
@@ -228,7 +228,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                             if (Volatile.Read(ref cancelled))
                             {
                                 actual = null;
-                                queue.Clear();
+                                _flow.Clear();
                                 return;
                             }
 

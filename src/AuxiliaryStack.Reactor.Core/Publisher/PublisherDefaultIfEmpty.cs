@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -30,7 +32,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             }
         }
 
-        sealed class DefaultIfEmptySubscriber : ISubscriber<T>, ISubscription, IQueue<T>
+        sealed class DefaultIfEmptySubscriber : ISubscriber<T>, ISubscription, IFlow<T>
         {
             readonly ISubscriber<T> actual;
 
@@ -91,16 +93,15 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
                 if (!taken)
                 {
                     taken = true;
-                    value = this.defaultValue;
-                    return true;
+                    return Just(defaultValue);
                 }
-                value = default(T);
-                return false;
+                
+                return None<T>();
             }
 
             public bool IsEmpty()
@@ -131,7 +132,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             }
         }
 
-        sealed class DefaultIfEmptyConditionalSubscriber : IConditionalSubscriber<T>, ISubscription, IQueue<T>
+        sealed class DefaultIfEmptyConditionalSubscriber : IConditionalSubscriber<T>, ISubscription, IFlow<T>
         {
             readonly IConditionalSubscriber<T> actual;
 
@@ -201,16 +202,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
                 if (!taken)
                 {
                     taken = true;
-                    value = this.defaultValue;
-                    return true;
+                    return Just(defaultValue);
                 }
-                value = default(T);
-                return false;
+                return None<T>();
             }
 
             public bool IsEmpty()

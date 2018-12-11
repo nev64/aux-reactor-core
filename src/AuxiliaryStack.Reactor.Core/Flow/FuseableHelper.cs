@@ -3,23 +3,23 @@
 namespace AuxiliaryStack.Reactor.Core.Flow
 {
     /// <summary>
-    /// Constants for <see cref="IQueueSubscription{T}.RequestFusion"/> parameter
+    /// Constants for <see cref="IFlowSubscription{T}.RequestFusion"/> parameter
     /// and return types.
     /// </summary>
     public static class FuseableHelper
     {
         /// <summary>
-        /// Returned by the <see cref="IQueueSubscription{T}.RequestFusion(int)"/> method to indicate no fusion will take place.
+        /// Returned by the <see cref="IFlowSubscription{T}.RequestFusion(int)"/> method to indicate no fusion will take place.
         /// </summary>
         public static readonly int NONE = 0;
 
         /// <summary>
-        /// Requested and returned by the <see cref="IQueueSubscription{T}.RequestFusion(int)"/> to indicate synchronous fusion.
+        /// Requested and returned by the <see cref="IFlowSubscription{T}.RequestFusion(int)"/> to indicate synchronous fusion.
         /// </summary>
         public static readonly int SYNC = 1;
 
         /// <summary>
-        /// Requested and returned by the <see cref="IQueueSubscription{T}.RequestFusion(int)"/> method to indicate asynchronous fusion.
+        /// Requested and returned by the <see cref="IFlowSubscription{T}.RequestFusion(int)"/> method to indicate asynchronous fusion.
         /// </summary>
         public static readonly int ASYNC = 2;
 
@@ -29,14 +29,14 @@ namespace AuxiliaryStack.Reactor.Core.Flow
         public static readonly int ANY = SYNC | ASYNC;
 
         /// <summary>
-        /// Requested and returned by the <see cref="IQueueSubscription{T}.RequestFusion(int)"/> method 
+        /// Requested and returned by the <see cref="IFlowSubscription{T}.RequestFusion(int)"/> method 
         /// to indicate that the requestor is a thread-boundary.
         /// </summary>
         public static readonly int BOUNDARY = 4;
 
         /// <summary>
-        /// Handle the case when the <see cref="IQueue{T}.Offer(T)"/> is called on a
-        /// <see cref="IQueueSubscription{T}"/>.
+        /// Handle the case when the <see cref="IFlow{T}.Offer(T)"/> is called on a
+        /// <see cref="IFlowSubscription{T}"/>.
         /// </summary>
         /// <returns>Never completes normally.</returns>
         public static bool DontCallOffer()

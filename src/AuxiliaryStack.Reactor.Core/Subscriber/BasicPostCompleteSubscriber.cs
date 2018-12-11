@@ -1,7 +1,9 @@
 ﻿using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Subscriber
@@ -13,7 +15,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
     /// </summary>
     /// <typeparam name="TSub">The input value type.</typeparam>
     /// <typeparam name="TPub">The output value type</typeparam>
-    internal abstract class BasicSinglePostCompleteSubscriber<TSub, TPub> : BasicSubscriber<TSub, TPub>, IQueue<TPub>
+    internal abstract class BasicSinglePostCompleteSubscriber<TSub, TPub> : BasicSubscriber<TSub, TPub>, IFlow<TPub>
     {
         private TPub _last;
         private bool _hasValue;
@@ -64,17 +66,16 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
 
         public bool Offer(TPub value) => FuseableHelper.DontCallOffer();
 
-        public bool Poll(out TPub value)
+        public Option<TPub> Poll()
         {
             if (_hasValue)
             {
                 _hasValue = false;
-                value = _last;
+                var value = _last;
                 _last = default;
-                return true;
+                return Just(value);
             }
-            value = default;
-            return false;
+            return None<TPub>();
         }
 
         public bool IsEmpty() => !_hasValue;

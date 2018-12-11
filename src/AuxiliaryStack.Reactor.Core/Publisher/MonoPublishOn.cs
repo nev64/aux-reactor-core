@@ -1,5 +1,7 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
+using static AuxiliaryStack.Monads.Option;
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
@@ -19,7 +21,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             _source.Subscribe(new PublishOnSubscriber(s, _scheduler));
         }
 
-        private sealed class PublishOnSubscriber : ISubscriber<T>, IQueueSubscription<T>
+        private sealed class PublishOnSubscriber : ISubscriber<T>, IFlowSubscription<T>
         {
             private readonly ISubscriber<T> _actual;
             private readonly IScheduler _scheduler;
@@ -69,16 +71,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public bool Offer(T value) => FuseableHelper.DontCallOffer();
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
                 if (!_isValueTaken)
                 {
-                    _isValueTaken = true;
-                    value = _value;
-                    return true;
+                    return Just(_value);
                 }
-                value = default;
-                return false;
+                
+                return None<T>();
             }
 
             public bool IsEmpty() => !_hasValue || _isValueTaken;

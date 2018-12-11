@@ -1,6 +1,8 @@
 ﻿using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Util;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -28,7 +30,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             }
         }
 
-        abstract class RangeBaseSubscription : IQueueSubscription<int>
+        abstract class RangeBaseSubscription : IFlowSubscription<int>
         {
             protected readonly int _end;
             protected int _index;
@@ -49,17 +51,15 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public bool Offer(int value) => FuseableHelper.DontCallOffer();
 
-            public bool Poll(out int value)
+            public Option<int> Poll()
             {
                 var i = _index;
                 if (i != _end)
                 {
                     _index = i + 1;
-                    value = i;
-                    return true;
+                    return Just(i);
                 }
-                value = 0;
-                return false;
+                return None<int>();
             }
 
             public void Request(long n)

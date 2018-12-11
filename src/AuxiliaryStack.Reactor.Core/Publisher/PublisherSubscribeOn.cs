@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -202,7 +204,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             }
         }
 
-        sealed class CallableSubscribeOn : IQueueSubscription<T>
+        sealed class CallableSubscribeOn : IFlowSubscription<T>
         {
             readonly ISubscriber<T> actual;
 
@@ -299,16 +301,15 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
                 if (hasValue)
                 {
                     hasValue = false;
-                    value = callable.Value;
-                    return true;
+                    return Just(callable.Value);
                 }
-                value = default(T);
-                return false;
+
+                return None<T>();
             }
 
             public bool IsEmpty()

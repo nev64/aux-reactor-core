@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -36,7 +38,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             readonly int prefetch;
 
-            IQueue<T> queue;
+            IFlow<T> _flow;
 
             int wip;
 
@@ -80,7 +82,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (fusionMode != FuseableHelper.ASYNC)
                 {
-                    if (!queue.Offer(t))
+                    if (!_flow.Offer(t))
                     {
                         OnError(BackpressureHelper.MissingBackpressureException());
                         return;
@@ -89,30 +91,29 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 Drain();
             }
 
-            public override bool Poll(out R value)
+            public override Option<R> Poll()
             {
                 var en = enumerator;
                 for (;;)
                 {
                     if (en == null)
                     {
-                        T t;
-                        if (queue.Poll(out t))
+                        var elem = _flow.Poll();
+                        if (elem.IsJust) 
                         {
-                            en = mapper(t).GetEnumerator();
+                            en = mapper(elem.GetValue())
+                                .GetEnumerator();
                             enumerator = en;
                         }
                         else
                         {
-                            value = default(R);
-                            return false;
+                            return None<R>();
                         }
                     }
 
                     if (en.MoveNext())
                     {
-                        value = en.Current;
-                        return true;
+                        return Just(en.Current);
                     }
                     en = null;
                 }
@@ -120,7 +121,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public override bool IsEmpty()
             {
-                return queue.IsEmpty();
+                return _flow.IsEmpty();
             }
 
             public override int RequestFusion(int mode)
@@ -148,7 +149,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 s.Cancel();
                 if (QueueDrainHelper.Enter(ref wip))
                 {
-                    queue.Clear();
+                    _flow.Clear();
                     enumerator?.Dispose();
                     enumerator = null;
                 }
@@ -162,7 +163,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     int m = qs.RequestFusion(FuseableHelper.ANY);
                     if (m == FuseableHelper.SYNC)
                     {
-                        queue = qs;
+                        _flow = qs;
                         fusionMode = m;
                         Volatile.Write(ref done, true);
 
@@ -174,7 +175,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     else
                     if (m == FuseableHelper.ASYNC)
                     {
-                        queue = qs;
+                        _flow = qs;
                         fusionMode = m;
 
                         actual.OnSubscribe(this);
@@ -185,7 +186,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     }
                 }
 
-                queue = QueueDrainHelper.CreateQueue<T>(prefetch);
+                _flow = QueueDrainHelper.CreateQueue<T>(prefetch);
                 return true;
             }
 
@@ -198,7 +199,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 int missed = 1;
                 var a = actual;
-                var q = queue;
+                var q = _flow;
                 var en = enumerator;
 
                 for (;;)
@@ -230,10 +231,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         bool d = Volatile.Read(ref done);
 
                         T v;
-
-                        if (queue.Poll(out v))
+                        var elem = _flow.Poll();
+                        if (elem.IsJust)
                         {
-                            en = mapper(v).GetEnumerator();
+                            en = mapper(elem.GetValue())
+                                .GetEnumerator();
                             enumerator = en;
                         }
                         else

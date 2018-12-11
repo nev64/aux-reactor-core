@@ -1,4 +1,5 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
 
@@ -84,24 +85,19 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
-                T t;
+               return  qs.Poll()
+                    .Filter(val =>
+                    {
+                        
+                        if (fusionMode == FuseableHelper.ASYNC)
+                        {
+                            actual.OnComplete();
+                        }
 
-                if (qs.Poll(out t))
-                {
-                    if (predicate(t))
-                    {
-                        value = t;
-                        return true;
-                    }
-                    if (fusionMode == FuseableHelper.ASYNC)
-                    {
-                        actual.OnComplete();
-                    }
-                }
-                value = default(T);
-                return false;
+                        return predicate(val);
+                    });
             }
 
             public override int RequestFusion(int mode)
@@ -198,24 +194,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return false;
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
-                T t;
+                return qs.Poll()
+                    .Filter(val =>
+                    {
+                        if (fusionMode == FuseableHelper.ASYNC)
+                        {
+                            actual.OnComplete();
+                        }
 
-                if (qs.Poll(out t))
-                {
-                    if (predicate(t))
-                    {
-                        value = t;
-                        return true;
-                    }
-                    if (fusionMode == FuseableHelper.ASYNC)
-                    {
-                        actual.OnComplete();
-                    }
-                }
-                value = default(T);
-                return false;
+                        return predicate(val);
+                    });
             }
 
             public override int RequestFusion(int mode)

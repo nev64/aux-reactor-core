@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -44,7 +45,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 8)]
-        abstract class BasePublishOnSubscriber : ISubscriber<T>, IQueueSubscription<T>
+        abstract class BasePublishOnSubscriber : ISubscriber<T>, IFlowSubscription<T>
         {
             protected readonly IWorker worker;
 
@@ -60,7 +61,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected ISubscription s;
 
-            protected IQueue<T> queue;
+            protected IFlow<T> _flow;
 
             protected bool done;
 
@@ -105,7 +106,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (SubscriptionHelper.Validate(ref this.s, s))
                 {
-                    var qs = s as IQueueSubscription<T>;
+                    var qs = s as IFlowSubscription<T>;
                     if (qs != null)
                     {
                         int mode = qs.RequestFusion(FuseableHelper.ANY | FuseableHelper.BOUNDARY);
@@ -113,7 +114,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         if (mode == FuseableHelper.SYNC)
                         {
                             this.sourceMode = mode;
-                            this.queue = qs;
+                            this._flow = qs;
                             Volatile.Write(ref done, true);
 
                             SubscribeActual();
@@ -125,7 +126,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         if (mode == FuseableHelper.ASYNC)
                         {
                             this.sourceMode = mode;
-                            this.queue = qs;
+                            this._flow = qs;
 
                             SubscribeActual();
 
@@ -135,7 +136,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
                     }
 
-                    queue = QueueDrainHelper.CreateQueue<T>(prefetch);
+                    _flow = QueueDrainHelper.CreateQueue<T>(prefetch);
 
                     SubscribeActual();
 
@@ -149,7 +150,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (sourceMode == FuseableHelper.NONE)
                 {
-                    if (!queue.Offer(t))
+                    if (!_flow.Offer(t))
                     {
                         s.Cancel();
                         OnError(BackpressureHelper.MissingBackpressureException("Queue is full?!"));
@@ -198,7 +199,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 s.Cancel();
                 if (QueueDrainHelper.Enter(ref wip))
                 {
-                    queue.Clear();
+                    _flow.Clear();
                 }
             }
 
@@ -244,9 +245,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
-                if (queue.Poll(out value))
+                var elem = _flow.Poll();
+                if (elem.IsJust)
                 {
                     if (sourceMode != FuseableHelper.SYNC)
                     {
@@ -261,19 +263,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             polled = p;
                         }
                     }
-                    return true;
                 }
-                return false;
+                return elem;
             }
 
             public bool IsEmpty()
             {
-                return queue.IsEmpty();
+                return _flow.IsEmpty();
             }
 
             public void Clear()
             {
-                queue.Clear();
+                _flow.Clear();
             }
 
             protected abstract void DrainSync();
@@ -307,7 +308,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             protected override void DrainSync()
             {
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 int missed = 1;
                 long e = emitted;
@@ -325,11 +326,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
 
                         T v;
-                        bool empty;
 
+                        Option<T> elem;
                         try
                         {
-                            empty = !q.Poll(out v);
+                            elem = q.Poll();
                         }
                         catch (Exception ex)
                         {
@@ -344,7 +345,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
-                        if (empty)
+                        if (elem.IsNone)
                         {
                             a.OnComplete();
 
@@ -352,7 +353,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
-                        a.OnNext(v);
+                        
+                        a.OnNext(elem.GetValue());
 
                         e++;
                     }
@@ -405,7 +407,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             protected override void DrainAsyncDelay()
             {
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 long e = emitted;
                 long p = polled;
@@ -431,11 +433,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         bool empty;
 
-                        T v;
+                        Option<T> elem;
 
                         try
                         {
-                            empty = !q.Poll(out v);
+                            elem = q.Poll();
                         }
                         catch (Exception ex)
                         {
@@ -455,7 +457,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                        
 
-                        if (d && empty)
+                        if (d && elem.IsNone)
                         {
                             Exception ex = error;
                             if (ex != null)
@@ -471,12 +473,12 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
-                        if (empty)
+                        if (elem.IsNone)
                         {
                             break;
                         }
 
-                        a.OnNext(v);
+                        a.OnNext(elem.GetValue());
 
                         e++;
 
@@ -529,7 +531,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             protected override void DrainAsyncNoDelay()
             {
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 long e = emitted;
                 long p = polled;
@@ -565,13 +567,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             }
                         }
 
-                        T v;
-
-                        bool empty;
+                        Option<T> elem;
 
                         try
                         {
-                            empty = !q.Poll(out v);
+                            elem = q.Poll();
                         }
                         catch (Exception ex)
                         {
@@ -589,7 +589,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
-                        if (d && empty)
+                        if (d && elem.IsNone)
                         {
                             a.OnComplete();
 
@@ -597,12 +597,12 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
-                        if (empty)
+                        if (elem.IsNone)
                         {
                             break;
                         }
 
-                        a.OnNext(v);
+                        a.OnNext(elem.GetValue());
 
                         e++;
 
@@ -730,7 +730,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             protected override void DrainSync()
             {
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 int missed = 1;
                 long e = emitted;
@@ -747,12 +747,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
-                        T v;
-                        bool empty;
+                        Option<T> elem;
 
                         try
                         {
-                            empty = !q.Poll(out v);
+                            elem = q.Poll();
                         }
                         catch (Exception ex)
                         {
@@ -767,7 +766,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
-                        if (empty)
+                        if (elem.IsNone)
                         {
                             a.OnComplete();
 
@@ -775,7 +774,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
-                        if (a.TryOnNext(v))
+                        if (a.TryOnNext(elem.GetValue()))
                         {
                             e++;
                         }
@@ -812,7 +811,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             protected override void DrainAsyncDelay()
             {
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 long e = emitted;
                 long p = polled;
@@ -836,13 +835,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         bool d = Volatile.Read(ref done);
 
-                        bool empty;
-
-                        T v;
+                        Option<T> elem;
 
                         try
                         {
-                            empty = !q.Poll(out v);
+                            elem = q.Poll();
                         }
                         catch (Exception ex)
                         {
@@ -862,7 +859,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
 
 
-                        if (d && empty)
+                        if (d && elem.IsNone)
                         {
                             Exception ex = error;
                             if (ex != null)
@@ -878,12 +875,12 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
-                        if (empty)
+                        if (elem.IsNone)
                         {
                             break;
                         }
 
-                        if (a.TryOnNext(v))
+                        if (a.TryOnNext(elem.GetValue()))
                         {
                             e++;
                         }
@@ -937,7 +934,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             protected override void DrainAsyncNoDelay()
             {
                 var a = actual;
-                var q = queue;
+                var q = _flow;
 
                 long e = emitted;
                 long p = polled;
@@ -973,13 +970,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             }
                         }
 
-                        T v;
-
-                        bool empty;
+                        Option<T> elem;
 
                         try
                         {
-                            empty = !q.Poll(out v);
+                            elem = q.Poll();
                         }
                         catch (Exception ex)
                         {
@@ -997,7 +992,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
-                        if (d && empty)
+                        if (d && elem.IsNone)
                         {
                             a.OnComplete();
 
@@ -1005,12 +1000,12 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
 
-                        if (empty)
+                        if (elem.IsNone)
                         {
                             break;
                         }
 
-                        if (a.TryOnNext(v))
+                        if (a.TryOnNext(elem.GetValue()))
                         {
                             e++;
                         }
@@ -1078,7 +1073,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                     try
                     {
-                        empty = queue.IsEmpty();
+                        empty = _flow.IsEmpty();
                     }
                     catch (Exception ex)
                     {

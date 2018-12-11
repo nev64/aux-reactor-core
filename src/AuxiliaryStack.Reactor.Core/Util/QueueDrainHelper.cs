@@ -48,18 +48,18 @@ namespace AuxiliaryStack.Reactor.Core.Util
         /// if one, an SpscOneQueue is created. Otherwise, an SpscArrayQueue is created with
         /// the capacityHint.</param>
         /// <returns></returns>
-        public static IQueue<T> CreateQueue<T>(int capacityHint)
+        public static IFlow<T> CreateQueue<T>(int capacityHint)
         {
             if (capacityHint < 0)
             {
-                return new SpscLinkedArrayQueue<T>(-capacityHint);
+                return new SpscLinkedArrayFlow<T>(-capacityHint);
             }
             else
             if (capacityHint == 1)
             {
-                return new SpscOneQueue<T>();
+                return new SpscOneFlow<T>();
             }
-            return new SpscArrayQueue<T>(capacityHint);
+            return new SpscArrayFlow<T>(capacityHint);
         }
 
         /// <summary>

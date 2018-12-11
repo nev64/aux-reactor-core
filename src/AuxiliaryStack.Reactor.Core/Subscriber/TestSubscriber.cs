@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -37,7 +38,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
 
         ISubscription s;
 
-        IQueueSubscription<T> qs;
+        IFlowSubscription<T> qs;
 
         long requested;
 
@@ -98,7 +99,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
             subscriptions++;
             if (SubscriptionHelper.SetOnce(ref this.s, s))
             {
-                var qs = s as IQueueSubscription<T>;
+                var qs = s as IFlowSubscription<T>;
                 this.qs = qs;
                 if (qs != null)
                 {
@@ -112,11 +113,11 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
                             {
                                 try
                                 {
-                                    T v;
+                                    Option<T> elem;
 
-                                    while (qs.Poll(out v))
+                                    while ((elem = qs.Poll()).IsJust)
                                     {
-                                        values.Add(v);
+                                        values.Add(elem.GetValue());
                                     }
                                     completions++;
                                     Volatile.Write(ref valueCount, values.Count);
@@ -152,10 +153,10 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
             {
                 try
                 {
-                    T v;
-                    while (qs.Poll(out v))
+                    Option<T> elem;
+                    while ((elem = qs.Poll()).IsJust)
                     {
-                        values.Add(v);
+                        values.Add(elem.GetValue());
                     }
                 }
                 catch (Exception ex)

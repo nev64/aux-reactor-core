@@ -1,6 +1,8 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -21,7 +23,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         {
             if (s is IConditionalSubscriber<T>)
             {
-                source.Subscribe(new TakeUntilPredicateConditionalSubscriber((IConditionalSubscriber<T>)s, predicate));
+                source.Subscribe(new TakeUntilPredicateConditionalSubscriber((IConditionalSubscriber<T>) s, predicate));
             }
             else
             {
@@ -81,7 +83,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 if (done)
                 {
@@ -89,21 +91,19 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     {
                         actual.OnComplete();
                     }
-                    value = default(T);
-                    return false;
+
+                    return None<T>();
                 }
 
-                T t;
+                var result = qs.Poll();
 
-                if (qs.Poll(out t))
+                if (result.IsJust)
                 {
-                    bool d = predicate(t);
+                    bool d = predicate(result.GetValue());
                     done = d;
-                    value = t;
-                    return true;
                 }
-                value = default(T);
-                return false;
+
+                return result;
             }
 
             public override int RequestFusion(int mode)
@@ -116,7 +116,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         {
             readonly Func<T, bool> predicate;
 
-            public TakeUntilPredicateConditionalSubscriber(IConditionalSubscriber<T> actual, Func<T, bool> predicate) : base(actual)
+            public TakeUntilPredicateConditionalSubscriber(IConditionalSubscriber<T> actual, Func<T, bool> predicate) :
+                base(actual)
             {
                 this.predicate = predicate;
             }
@@ -200,7 +201,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return c;
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 if (done)
                 {
@@ -208,21 +209,20 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     {
                         actual.OnComplete();
                     }
-                    value = default(T);
-                    return false;
+
+                    return None<T>();
                 }
 
-                T t;
 
-                if (qs.Poll(out t))
+                var result = qs.Poll();
+
+                if (result.IsJust)
                 {
-                    bool d = predicate(t);
+                    bool d = predicate(result.GetValue());
                     done = d;
-                    value = t;
-                    return true;
                 }
-                value = default(T);
-                return false;
+
+                return result;
             }
 
             public override int RequestFusion(int mode)

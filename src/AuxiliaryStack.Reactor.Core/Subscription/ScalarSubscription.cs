@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Subscription
@@ -9,19 +11,15 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
     /// A fuseable subscription that emits a single value on request or poll.
     /// </summary>
     /// <typeparam name="T">The value type</typeparam>
-    public sealed class ScalarSubscription<T> : IQueueSubscription<T>
+    public sealed class ScalarSubscription<T> : IFlowSubscription<T>
     {
-        readonly ISubscriber<T> actual;
-
-        readonly T value;
-
-        int state;
-
-        static readonly int READY = 0;
-
-        static readonly int REQUESTED = 1;
-
-        static readonly int CANCELLED = 2;
+        const int READY = 0;//todo: enum
+        const int REQUESTED = 1;
+        const int CANCELLED = 2;
+        
+        private readonly ISubscriber<T> _actual;
+        private readonly T _value;
+        private int _state;
 
         /// <summary>
         /// Constructs a ScalarSubscription with the target ISubscriber and value to
@@ -31,12 +29,8 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// <param name="value">The value to emit</param>
         public ScalarSubscription(ISubscriber<T> actual, T value)
         {
-            if (value == null)
-            {
-                throw new ArgumentNullException("value");
-            }
-            this.actual = actual;
-            this.value = value;
+            _actual = actual;
+            _value = value;
         }
 
         /// <inheritdoc/>
@@ -46,6 +40,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
             {
                 return FuseableHelper.SYNC;
             }
+
             return FuseableHelper.NONE;
         }
 
@@ -56,29 +51,28 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         }
 
         /// <inheritdoc/>
-        public bool Poll(out T value)
+        public Option<T> Poll()
         {
-            int s = state;
+            var s = _state;
             if (s == READY)
             {
-                state = REQUESTED;
-                value = this.value;
-                return true;
+                _state = REQUESTED;
+                return Just(_value);
             }
-            value = default(T);
-            return false;
+
+            return None<T>();
         }
 
         /// <inheritdoc/>
         public bool IsEmpty()
         {
-            return state != READY;
+            return _state != READY;
         }
 
         /// <inheritdoc/>
         public void Clear()
         {
-            state = REQUESTED;
+            _state = REQUESTED;
         }
 
         /// <inheritdoc/>
@@ -86,12 +80,12 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         {
             if (SubscriptionHelper.Validate(n))
             {
-                if (Interlocked.CompareExchange(ref state, REQUESTED, READY) == READY)
+                if (Interlocked.CompareExchange(ref _state, REQUESTED, READY) == READY)
                 {
-                    actual.OnNext(value);
-                    if (Volatile.Read(ref state) != CANCELLED)
+                    _actual.OnNext(_value);
+                    if (Volatile.Read(ref _state) != CANCELLED)
                     {
-                        actual.OnComplete();
+                        _actual.OnComplete();
                     }
                 }
             }
@@ -100,7 +94,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// <inheritdoc/>
         public void Cancel()
         {
-            Volatile.Write(ref state, CANCELLED);
+            Volatile.Write(ref _state, CANCELLED);
         }
     }
 }

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
 using AuxiliaryStack.Reactor.Core.Subscription;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -104,7 +106,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 long r = remaining;
                 if (r == 0)
@@ -115,10 +117,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         qs.Cancel();
                         actual.OnComplete();
                     }
-                    value = default(T);
-                    return false;
+                    return None<T>();
                 }
-                if (qs.Poll(out value))
+
+                var result = qs.Poll();
+                if (result.IsJust)
                 {
                     remaining = --r;
                     if (r == 0)
@@ -130,10 +133,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             actual.OnComplete();
                         }
                     }
-
-                    return true;
                 }
-                return false;
+                return result;
             }
         }
 
@@ -237,7 +238,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 long r = remaining;
                 if (r == 0)
@@ -248,10 +249,12 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         qs.Cancel();
                         actual.OnComplete();
                     }
-                    value = default(T);
-                    return false;
+
+                    return None<T>();
                 }
-                if (qs.Poll(out value))
+
+                var result = qs.Poll();
+                if (result.IsJust) 
                 {
                     remaining = --r;
                     if (r == 0)
@@ -263,10 +266,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             actual.OnComplete();
                         }
                     }
-
-                    return true;
                 }
-                return false;
+                return result;
             }
 
             public override bool IsEmpty()

@@ -30,7 +30,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             readonly long n;
 
-            readonly IQueue<T> queue;
+            readonly IFlow<T> _flow;
 
             ISubscription s;
 
@@ -44,7 +44,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 this.actual = actual;
                 this.n = n;
-                this.queue = new ArrayQueue<T>();
+                this._flow = new ArrayFlow<T>();
             }
 
             public void Cancel()
@@ -55,12 +55,12 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public void OnComplete()
             {
-                BackpressureHelper.PostComplete(ref requested, actual, queue, ref cancelled);
+                BackpressureHelper.PostComplete(ref requested, actual, _flow, ref cancelled);
             }
 
             public void OnError(Exception e)
             {
-                queue.Clear();
+                _flow.Clear();
                 actual.OnError(e);
             }
 
@@ -69,13 +69,12 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 long z = size;
                 if (z == n)
                 {
-                    T u;
-                    queue.Poll(out u);
-                    queue.Offer(t);
+                    _flow.Poll();
+                    _flow.Offer(t);
                 }
                 else
                 {
-                    queue.Offer(t);
+                    _flow.Offer(t);
                     size = z + 1;
                 }
             }
@@ -94,7 +93,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (SubscriptionHelper.Validate(n))
                 {
-                    if (!BackpressureHelper.PostCompleteRequest(ref requested, n, actual, queue, ref cancelled))
+                    if (!BackpressureHelper.PostCompleteRequest(ref requested, n, actual, _flow, ref cancelled))
                     {
                         s.Request(n);
                     }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Subscription
@@ -10,7 +12,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
     /// and emits it on request.
     /// </summary>
     /// <typeparam name="T">The value type.</typeparam>
-    public class DeferredScalarSubscription<T> : IQueueSubscription<T>
+    public class DeferredScalarSubscription<T> : IFlowSubscription<T>
     {
         /// <summary>
         /// The actual downstream subscriber.
@@ -164,22 +166,20 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         }
 
         /// <inheritdoc/>
-        public bool Offer(T value)
+        public bool Offer(T _)
         {
             return FuseableHelper.DontCallOffer();
         }
 
         /// <inheritdoc/>
-        public bool Poll(out T value)
-        {
+        public Option<T> Poll()
+        {    
             if (fusionState == HAS_VALUE)
             {
                 fusionState = COMPLETE;
-                value = this.value;
-                return true;
+                return Just(value);
             }
-            value = default(T);
-            return false;
+            return None<T>();
         }
 
         /// <inheritdoc/>

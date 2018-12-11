@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -125,7 +127,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.NONE;
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 var qs = this.qs;
                 T local;
@@ -133,15 +135,16 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     for (;;)
                     {
-                        if (qs.Poll(out local))
+                        var elem = qs.Poll();
+                        if (elem.IsJust)
                         {
+                            local = elem.GetValue();
                             K k = keySelector(local);
                             if (!nonEmpty)
                             {
                                 nonEmpty = true;
                                 last = k;
-                                value = local;
-                                return true;
+                                return Just(local);
                             }
                             if (comparer.Equals(last, k))
                             {
@@ -150,14 +153,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             }
 
                             last = k;
-                            value = local;
-                            return true;
+                            return Just(local);
                         }
-                        else
-                        {
-                            value = default(T);
-                            return false;
-                        }
+                        
+                        return None<T>();
                     }
                 }
                 else
@@ -165,8 +164,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     long p = 0L;
                     for (;;)
                     {
-                        if (qs.Poll(out local))
+                        var elem = qs.Poll();
+                        if (elem.IsJust)
                         {
+                            local = elem.GetValue();
                             K k = keySelector(local);
                             if (comparer.Equals(last, k))
                             {
@@ -180,8 +181,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 qs.Request(p);
                             }
-                            value = local;
-                            return true;
+
+                            return Just(local);
                         }
                         else
                         {
@@ -189,8 +190,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 qs.Request(p);
                             }
-                            value = default(T);
-                            return false;
+                            
+                            return None<T>();
                         }
                     }
                 }
@@ -289,7 +290,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.NONE;
             }
 
-            public override bool Poll(out T value)
+            public override Option<T> Poll()
             {
                 var qs = this.qs;
                 T local;
@@ -297,15 +298,17 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     for (;;)
                     {
-                        if (qs.Poll(out local))
+                        //todo: review everything and refactor
+                        var elem = qs.Poll();
+                        if (elem.IsJust)
                         {
+                            local = elem.GetValue();
                             K k = keySelector(local);
                             if (!nonEmpty)
                             {
                                 nonEmpty = true;
                                 last = k;
-                                value = local;
-                                return true;
+                                return Just(local);
                             }
                             if (comparer.Equals(last, k))
                             {
@@ -314,14 +317,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             }
 
                             last = k;
-                            value = local;
-                            return true;
+                            return Just(local);
                         }
-                        else
-                        {
-                            value = default(T);
-                            return false;
-                        }
+
+                        return None<T>();
                     }
                 }
                 else
@@ -329,8 +328,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     long p = 0L;
                     for (;;)
                     {
-                        if (qs.Poll(out local))
+                        var elem = qs.Poll();
+                        if (elem.IsJust)
                         {
+                            local = elem.GetValue();
                             K k = keySelector(local);
                             if (comparer.Equals(last, k))
                             {
@@ -344,8 +345,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 qs.Request(p);
                             }
-                            value = local;
-                            return true;
+                            return Just(local);
                         }
                         else
                         {
@@ -353,8 +353,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 qs.Request(p);
                             }
-                            value = default(T);
-                            return false;
+
+                            return None<T>();
                         }
                     }
                 }

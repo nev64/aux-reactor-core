@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
+using static AuxiliaryStack.Monads.Option;
 
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
@@ -25,57 +27,58 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             switch (backpressure)
             {
                 case BackpressureHandling.Error:
-                    {
-                        ErrorObserver o = new ErrorObserver(s);
-                        s.OnSubscribe(o);
-                        emitter(o);
-                    }
+                {
+                    ErrorObserver o = new ErrorObserver(s);
+                    s.OnSubscribe(o);
+                    emitter(o);
+                }
                     break;
                 case BackpressureHandling.Drop:
-                    {
-                        ErrorObserver o = new ErrorObserver(s);
-                        s.OnSubscribe(o);
-                        emitter(o);
-                    }
+                {
+                    ErrorObserver o = new ErrorObserver(s);
+                    s.OnSubscribe(o);
+                    emitter(o);
+                }
                     break;
                 case BackpressureHandling.Latest:
+                {
+                    if (s is IConditionalSubscriber<T>)
                     {
-                        if (s is IConditionalSubscriber<T>)
-                        {
-                            LatestConditionalObserver o = new LatestConditionalObserver((IConditionalSubscriber<T>)s);
-                            s.OnSubscribe(o);
-                            emitter(o);
-                        }
-                        else
-                        {
-                            LatestObserver o = new LatestObserver(s);
-                            s.OnSubscribe(o);
-                            emitter(o);
-                        }
-                    }
-                    break;
-                case BackpressureHandling.Buffer:
-                    {
-                        if (s is IConditionalSubscriber<T>)
-                        {
-                            BufferConditionalObserver o = new BufferConditionalObserver((IConditionalSubscriber<T>)s, Flux.BufferSize);
-                            s.OnSubscribe(o);
-                            emitter(o);
-                        }
-                        else
-                        {
-                            BufferObserver o = new BufferObserver(s, Flux.BufferSize);
-                            s.OnSubscribe(o);
-                            emitter(o);
-                        }
-                    }
-                    break;
-                default:
-                    {
-                        NoneObserver o = new NoneObserver(s);
+                        LatestConditionalObserver o = new LatestConditionalObserver((IConditionalSubscriber<T>) s);
                         s.OnSubscribe(o);
                         emitter(o);
                     }
+                    else
+                    {
+                        LatestObserver o = new LatestObserver(s);
+                        s.OnSubscribe(o);
+                        emitter(o);
+                    }
+                }
+                    break;
+                case BackpressureHandling.Buffer:
+                {
+                    if (s is IConditionalSubscriber<T>)
+                    {
+                        BufferConditionalObserver o =
+                            new BufferConditionalObserver((IConditionalSubscriber<T>) s, Flux.BufferSize);
+                        s.OnSubscribe(o);
+                        emitter(o);
+                    }
+                    else
+                    {
+                        BufferObserver o = new BufferObserver(s, Flux.BufferSize);
+                        s.OnSubscribe(o);
+                        emitter(o);
+                    }
+                }
+                    break;
+                default:
+                {
+                    NoneObserver o = new NoneObserver(s);
+                    s.OnSubscribe(o);
+                    emitter(o);
+                }
                     break;
             }
         }
@@ -95,10 +98,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public long Requested
             {
-                get
-                {
-                    return Volatile.Read(ref requested);
-                }
+                get { return Volatile.Read(ref requested); }
             }
 
             public override void Cancel()
@@ -133,7 +133,6 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 DisposableHelper.Replace(ref this.d, d);
             }
-
         }
 
         sealed class ErrorObserver : BasicRejectingSubscription<T>, IFluxEmitter<T>
@@ -150,10 +149,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public long Requested
             {
-                get
-                {
-                    return Volatile.Read(ref requested);
-                }
+                get { return Volatile.Read(ref requested); }
             }
 
             public ErrorObserver(ISubscriber<T> actual)
@@ -172,6 +168,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     return;
                 }
+
                 done = true;
                 actual.OnComplete();
             }
@@ -183,6 +180,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     ExceptionHelper.OnErrorDropped(error);
                     return;
                 }
+
                 done = true;
                 actual.OnError(error);
             }
@@ -236,10 +234,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public long Requested
             {
-                get
-                {
-                    return Volatile.Read(ref requested);
-                }
+                get { return Volatile.Read(ref requested); }
             }
 
             public DropObserver(ISubscriber<T> actual)
@@ -289,11 +284,11 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 8)]
-        sealed class BufferObserver : IFluxEmitter<T>, IQueueSubscription<T>
+        sealed class BufferObserver : IFluxEmitter<T>, IFlowSubscription<T>
         {
             readonly ISubscriber<T> actual;
 
-            readonly IQueue<T> queue;
+            readonly IFlow<T> _flow;
 
             bool outputFused;
 
@@ -317,16 +312,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public long Requested
             {
-                get
-                {
-                    return Volatile.Read(ref requested);
-                }
+                get { return Volatile.Read(ref requested); }
             }
 
             public BufferObserver(ISubscriber<T> actual, int bufferSize)
             {
                 this.actual = actual;
-                this.queue = new SpscLinkedArrayQueue<T>(bufferSize);
+                this._flow = new SpscLinkedArrayFlow<T>(bufferSize);
             }
 
             public void Cancel()
@@ -335,12 +327,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     return;
                 }
+
                 Volatile.Write(ref cancelled, true);
                 DisposableHelper.Dispose(ref d);
 
                 if (QueueDrainHelper.Enter(ref wip))
                 {
-                    queue.Clear();
+                    _flow.Clear();
                 }
             }
 
@@ -377,14 +370,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             void DrainOutput()
             {
-                var q = queue;
+                var q = _flow;
                 var a = actual;
 
                 int missed = 1;
 
                 for (;;)
                 {
-
                     if (Volatile.Read(ref cancelled))
                     {
                         q.Clear();
@@ -393,16 +385,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                     bool d = Volatile.Read(ref done);
 
-                    T v;
+                    var elem = _flow.Poll();
 
-                    bool empty = !queue.Poll(out v);
-
-                    if (!empty)
+                    if (elem.IsNone)
                     {
-                        a.OnNext(default(T));
+                        a.OnNext(default);
                     }
 
-                    if (d && empty)
+                    if (d && elem.IsNone)
                     {
                         Exception ex = error;
                         if (ex != null)
@@ -413,8 +403,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         {
                             a.OnComplete();
                         }
+
                         return;
                     }
+
                     missed = QueueDrainHelper.Leave(ref wip, missed);
                     if (missed == 0)
                     {
@@ -425,7 +417,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             void DrainRegular()
             {
-                var q = queue;
+                var q = _flow;
                 var a = actual;
 
                 int missed = 1;
@@ -445,11 +437,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         bool d = Volatile.Read(ref done);
 
-                        T v;
+                        var elem = _flow.Poll();
 
-                        bool empty = !queue.Poll(out v);
-
-                        if (d && empty)
+                        if (d && elem.IsNone)
                         {
                             Exception ex = error;
                             if (ex != null)
@@ -460,15 +450,16 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 a.OnComplete();
                             }
+
                             return;
                         }
 
-                        if (empty)
+                        if (elem.IsNone)
                         {
                             break;
                         }
 
-                        a.OnNext(v);
+                        a.OnNext(elem.GetValue());
 
                         e++;
                     }
@@ -492,6 +483,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 a.OnComplete();
                             }
+
                             return;
                         }
                     }
@@ -524,7 +516,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public void Next(T value)
             {
-                queue.Offer(value);
+                _flow.Offer(value);
                 Drain();
             }
 
@@ -540,28 +532,28 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
-                return queue.Poll(out value);
+                return _flow.Poll();
             }
 
             public bool IsEmpty()
             {
-                return queue.IsEmpty();
+                return _flow.IsEmpty();
             }
 
             public void Clear()
             {
-                queue.Clear();
+                _flow.Clear();
             }
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 8)]
-        sealed class BufferConditionalObserver : IFluxEmitter<T>, IQueueSubscription<T>
+        sealed class BufferConditionalObserver : IFluxEmitter<T>, IFlowSubscription<T>
         {
             readonly IConditionalSubscriber<T> actual;
 
-            readonly IQueue<T> queue;
+            readonly IFlow<T> _flow;
 
             bool outputFused;
 
@@ -585,16 +577,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public long Requested
             {
-                get
-                {
-                    return Volatile.Read(ref requested);
-                }
+                get { return Volatile.Read(ref requested); }
             }
 
             public BufferConditionalObserver(IConditionalSubscriber<T> actual, int bufferSize)
             {
                 this.actual = actual;
-                this.queue = new SpscLinkedArrayQueue<T>(bufferSize);
+                this._flow = new SpscLinkedArrayFlow<T>(bufferSize);
             }
 
             public void Cancel()
@@ -603,12 +592,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     return;
                 }
+
                 Volatile.Write(ref cancelled, true);
                 DisposableHelper.Dispose(ref d);
 
                 if (QueueDrainHelper.Enter(ref wip))
                 {
-                    queue.Clear();
+                    _flow.Clear();
                 }
             }
 
@@ -645,14 +635,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             void DrainOutput()
             {
-                var q = queue;
+                var q = _flow;
                 var a = actual;
 
                 int missed = 1;
 
                 for (;;)
                 {
-
                     if (Volatile.Read(ref cancelled))
                     {
                         q.Clear();
@@ -661,16 +650,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                     bool d = Volatile.Read(ref done);
 
-                    T v;
+                    var elem = _flow.Poll();
 
-                    bool empty = !queue.Poll(out v);
-
-                    if (!empty)
+                    if (elem.IsJust)
                     {
-                        a.TryOnNext(default(T));
+                        a.TryOnNext(default);
                     }
 
-                    if (d && empty)
+                    if (d && elem.IsNone)
                     {
                         Exception ex = error;
                         if (ex != null)
@@ -681,8 +668,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         {
                             a.OnComplete();
                         }
+
                         return;
                     }
+
                     missed = QueueDrainHelper.Leave(ref wip, missed);
                     if (missed == 0)
                     {
@@ -693,7 +682,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             void DrainRegular()
             {
-                var q = queue;
+                var q = _flow;
                 var a = actual;
 
                 int missed = 1;
@@ -713,11 +702,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         bool d = Volatile.Read(ref done);
 
-                        T v;
+                        var elem = _flow.Poll();
 
-                        bool empty = !queue.Poll(out v);
-
-                        if (d && empty)
+                        if (d && elem.IsNone)
                         {
                             Exception ex = error;
                             if (ex != null)
@@ -728,15 +715,16 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 a.OnComplete();
                             }
+
                             return;
                         }
 
-                        if (empty)
+                        if (elem.IsNone)
                         {
                             break;
                         }
 
-                        if (a.TryOnNext(v))
+                        if (a.TryOnNext(elem.GetValue()))
                         {
                             e++;
                         }
@@ -761,6 +749,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 a.OnComplete();
                             }
+
                             return;
                         }
                     }
@@ -793,7 +782,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public void Next(T value)
             {
-                queue.Offer(value);
+                _flow.Offer(value);
                 Drain();
             }
 
@@ -809,24 +798,24 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return FuseableHelper.DontCallOffer();
             }
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
-                return queue.Poll(out value);
+                return _flow.Poll();
             }
 
             public bool IsEmpty()
             {
-                return queue.IsEmpty();
+                return _flow.IsEmpty();
             }
 
             public void Clear()
             {
-                queue.Clear();
+                _flow.Clear();
             }
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 8)]
-        sealed class LatestObserver : IFluxEmitter<T>, IQueueSubscription<T>
+        sealed class LatestObserver : IFluxEmitter<T>, IFlowSubscription<T>
         {
             readonly ISubscriber<T> actual;
 
@@ -856,10 +845,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public long Requested
             {
-                get
-                {
-                    return Volatile.Read(ref requested);
-                }
+                get { return Volatile.Read(ref requested); }
             }
 
             internal LatestObserver(ISubscriber<T> actual)
@@ -903,18 +889,17 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return m;
             }
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
                 var e = Volatile.Read(ref entry);
 
                 if (e != null)
                 {
                     e = Interlocked.Exchange(ref entry, null);
-                    value = e.value;
-                    return true;
+                    return Just(e.value);
                 }
-                value = default(T);
-                return false;
+
+                return None<T>();
             }
 
             public bool IsEmpty()
@@ -942,6 +927,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     return;
                 }
+
                 Volatile.Write(ref cancelled, true);
                 DisposableHelper.Dispose(ref d);
 
@@ -977,7 +963,6 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 for (;;)
                 {
-
                     if (Volatile.Read(ref cancelled))
                     {
                         Clear();
@@ -1004,8 +989,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         {
                             a.OnComplete();
                         }
+
                         return;
                     }
+
                     missed = QueueDrainHelper.Leave(ref wip, missed);
                     if (missed == 0)
                     {
@@ -1035,11 +1022,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         bool d = Volatile.Read(ref done);
 
-                        T v;
+                        var elem = Poll();
 
-                        bool empty = Poll(out v);
-
-                        if (d && empty)
+                        if (d && elem.IsNone)
                         {
                             Exception ex = error;
                             if (ex != null)
@@ -1050,15 +1035,16 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 a.OnComplete();
                             }
+
                             return;
                         }
 
-                        if (empty)
+                        if (elem.IsNone)
                         {
                             break;
                         }
 
-                        a.OnNext(v);
+                        a.OnNext(elem.GetValue());
 
                         e++;
                     }
@@ -1082,6 +1068,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 a.OnComplete();
                             }
+
                             return;
                         }
                     }
@@ -1101,7 +1088,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 8)]
-        sealed class LatestConditionalObserver : IFluxEmitter<T>, IQueueSubscription<T>
+        sealed class LatestConditionalObserver : IFluxEmitter<T>, IFlowSubscription<T>
         {
             readonly IConditionalSubscriber<T> actual;
 
@@ -1131,10 +1118,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public long Requested
             {
-                get
-                {
-                    return Volatile.Read(ref requested);
-                }
+                get { return Volatile.Read(ref requested); }
             }
 
             internal LatestConditionalObserver(IConditionalSubscriber<T> actual)
@@ -1178,18 +1162,17 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return m;
             }
 
-            public bool Poll(out T value)
+            public Option<T> Poll()
             {
                 var e = Volatile.Read(ref entry);
 
                 if (e != null)
                 {
                     e = Interlocked.Exchange(ref entry, null);
-                    value = e.value;
-                    return true;
+                    return Just(e.value);
                 }
-                value = default(T);
-                return false;
+
+                return None<T>();
             }
 
             public bool IsEmpty()
@@ -1217,6 +1200,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     return;
                 }
+
                 Volatile.Write(ref cancelled, true);
                 DisposableHelper.Dispose(ref d);
 
@@ -1252,7 +1236,6 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 for (;;)
                 {
-
                     if (Volatile.Read(ref cancelled))
                     {
                         Clear();
@@ -1279,8 +1262,10 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         {
                             a.OnComplete();
                         }
+
                         return;
                     }
+
                     missed = QueueDrainHelper.Leave(ref wip, missed);
                     if (missed == 0)
                     {
@@ -1310,11 +1295,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         bool d = Volatile.Read(ref done);
 
-                        T v;
+                        var elem = Poll();
 
-                        bool empty = Poll(out v);
-
-                        if (d && empty)
+                        if (d && elem.IsNone)
                         {
                             Exception ex = error;
                             if (ex != null)
@@ -1325,15 +1308,16 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 a.OnComplete();
                             }
+
                             return;
                         }
 
-                        if (empty)
+                        if (elem.IsNone)
                         {
                             break;
                         }
 
-                        if (a.TryOnNext(v))
+                        if (a.TryOnNext(elem.GetValue()))
                         {
                             e++;
                         }
@@ -1358,6 +1342,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             {
                                 a.OnComplete();
                             }
+
                             return;
                         }
                     }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -16,10 +17,10 @@ namespace AuxiliaryStack.Reactor.Core
     /// but one should not call its methods.
     /// </remarks>
     /// <typeparam name="T">The input and output type.</typeparam>
-    public sealed class UnicastProcessor<T> : IFluxProcessor<T>, IQueueSubscription<T>
+    public sealed class UnicastProcessor<T> : IFluxProcessor<T>, IFlowSubscription<T>
     {
 
-        readonly IQueue<T> queue;
+        readonly IFlow<T> _flow;
 
         bool cancelled;
 
@@ -88,7 +89,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <param name="onTerminated">The optional termination action.</param>
         public UnicastProcessor(Action onTerminated = null)
         {
-            this.queue = new SpscLinkedArrayQueue<T>(Flux.BufferSize);
+            this._flow = new SpscLinkedArrayFlow<T>(Flux.BufferSize);
             this.onTerminated = onTerminated;
         }
 
@@ -100,7 +101,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <param name="onTerminated">The optional termination action.</param>
         public UnicastProcessor(int capacityHint, Action onTerminated = null)
         {
-            this.queue = new SpscLinkedArrayQueue<T>(capacityHint);
+            this._flow = new SpscLinkedArrayFlow<T>(capacityHint);
             this.onTerminated = onTerminated;
         }
 
@@ -145,7 +146,7 @@ namespace AuxiliaryStack.Reactor.Core
                 return;
             }
 
-            queue.Offer(t);
+            _flow.Offer(t);
             Drain();
         }
 
@@ -215,7 +216,7 @@ namespace AuxiliaryStack.Reactor.Core
 
         void DrainRegularFused(ISubscriber<T> a)
         {
-            var q = queue;
+            var q = _flow;
             int missed = 1;
 
             for (;;)
@@ -257,7 +258,7 @@ namespace AuxiliaryStack.Reactor.Core
 
         void DrainRegular(ISubscriber<T> a)
         {
-            var q = queue;
+            var q = _flow;
             int missed = 1;
 
             for (;;)
@@ -276,11 +277,9 @@ namespace AuxiliaryStack.Reactor.Core
 
                     bool d = lvDone();
 
-                    T v;
+                    Option<T> elem = q.Poll();
 
-                    bool empty = !q.Poll(out v);
-
-                    if (d && empty)
+                    if (d && elem.IsNone)
                     {
                         regular = null;
                         Exception ex = error;
@@ -296,12 +295,12 @@ namespace AuxiliaryStack.Reactor.Core
                         return;
                     }
 
-                    if (empty)
+                    if (elem.IsNone)
                     {
                         break;
                     }
 
-                    a.OnNext(v);
+                    a.OnNext(elem.GetValue());
 
                     e++;
                 }
@@ -347,7 +346,7 @@ namespace AuxiliaryStack.Reactor.Core
 
         void DrainConditionalFused(IConditionalSubscriber<T> a)
         {
-            var q = queue;
+            var q = _flow;
             int missed = 1;
 
             for (;;)
@@ -389,7 +388,7 @@ namespace AuxiliaryStack.Reactor.Core
 
         void DrainConditional(IConditionalSubscriber<T> a)
         {
-            var q = queue;
+            var q = _flow;
             int missed = 1;
 
             for (;;)
@@ -408,11 +407,9 @@ namespace AuxiliaryStack.Reactor.Core
 
                     bool d = lvDone();
 
-                    T v;
+                    var elem = q.Poll();
 
-                    bool empty = !q.Poll(out v);
-
-                    if (d && empty)
+                    if (d && elem.IsNone)
                     {
                         conditional = null;
                         Exception ex = error;
@@ -428,12 +425,12 @@ namespace AuxiliaryStack.Reactor.Core
                         return;
                     }
 
-                    if (empty)
+                    if (elem.IsNone)
                     {
                         break;
                     }
 
-                    a.OnNext(v);
+                    a.OnNext(elem.GetValue());
 
                     e++;
                 }
@@ -563,29 +560,20 @@ namespace AuxiliaryStack.Reactor.Core
         }
 
         /// <inheritdoc/>
-        public bool Offer(T value)
-        {
-            return FuseableHelper.DontCallOffer();
-        }
+        public bool Offer(T value) => FuseableHelper.DontCallOffer();
 
         /// <inheritdoc/>
-        public bool Poll(out T value)
-        {
-            return queue.Poll(out value);
-        }
+        public Option<T> Poll() => _flow.Poll();
 
         /// <inheritdoc/>
-        public bool IsEmpty()
-        {
-            return queue.IsEmpty();
-        }
+        public bool IsEmpty() => _flow.IsEmpty();
 
         /// <inheritdoc/>
         public void Clear()
         {
             regular = null;
             conditional = null;
-            queue.Clear();
+            _flow.Clear();
         }
     }
 }

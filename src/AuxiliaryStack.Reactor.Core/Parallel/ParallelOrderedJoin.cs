@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using AuxiliaryStack.Monads.Extensions;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
@@ -168,17 +169,18 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                             bool d = Volatile.Read(ref inner.done);
 
-                            var q = Volatile.Read(ref inner.queue);
+                            var q = Volatile.Read(ref inner._flow);
                             if (q != null)
                             {
-                                var vsi = vs[i];
-                                if (vsi == null)
+                                var vsi = vs[i].ToOption();
+                                if (vsi.IsNone)
                                 {
                                     bool hasValue;
 
                                     try
                                     {
-                                        hasValue = q.Poll(out vsi);
+                                        vsi = q.Poll();
+                                        hasValue = vsi.IsJust;
                                     }
                                     catch (Exception exc)
                                     {
@@ -192,10 +194,10 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                                     }
                                     if (hasValue)
                                     {
-                                        vs[i] = vsi;
-                                        if (min == null || min.CompareTo(vsi) > 0)
+                                        vs[i] = vsi.GetValue();
+                                        if (min == null || min.CompareTo(vsi.GetValue()) > 0)
                                         {
-                                            min = vsi;
+                                            min = vsi.GetValue();
                                             minIndex = i;
                                         }
                                     } else
@@ -213,14 +215,14 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                                 }
                                 else
                                 {
-                                    if (vsi == FINISHED)
+                                    if (vsi.GetValue() == FINISHED)
                                     {
                                         finished++;
                                     }
                                     else
-                                    if (min == null || min.CompareTo(vsi) > 0)
+                                    if (min == null || min.CompareTo(vsi.GetValue()) > 0)
                                     {
-                                        min = vsi;
+                                        min = vsi.GetValue();
                                         minIndex = i;
                                     }
                                 }
@@ -270,7 +272,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             ISubscription s;
 
-            internal IQueue<IOrderedItem<T>> queue;
+            internal IFlow<IOrderedItem<T>> _flow;
 
             internal bool done;
 
@@ -289,14 +291,14 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             {
                 if (SubscriptionHelper.SetOnce(ref this.s, s))
                 {
-                    var qs = s as IQueueSubscription<IOrderedItem<T>>;
+                    var qs = s as IFlowSubscription<IOrderedItem<T>>;
                     if (qs != null)
                     {
                         int m = qs.RequestFusion(FuseableHelper.ANY);
                         if (m == FuseableHelper.SYNC)
                         {
                             fusionMode = m;
-                            Volatile.Write(ref queue, qs);
+                            Volatile.Write(ref _flow, qs);
                             Volatile.Write(ref done, true);
 
                             parent.Drain();
@@ -306,13 +308,13 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                         if (m == FuseableHelper.ASYNC)
                         {
                             fusionMode = m;
-                            Volatile.Write(ref queue, qs);
+                            Volatile.Write(ref _flow, qs);
                             s.Request(prefetch < 0 ? long.MaxValue : prefetch);
                             return;
                         }
                     }
 
-                    Volatile.Write(ref queue, QueueDrainHelper.CreateQueue<IOrderedItem<T>>(prefetch));
+                    Volatile.Write(ref _flow, QueueDrainHelper.CreateQueue<IOrderedItem<T>>(prefetch));
 
                     s.Request(prefetch < 0 ? long.MaxValue : prefetch);
                 }
@@ -322,7 +324,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             {
                 if (fusionMode == FuseableHelper.NONE)
                 {
-                    if (!queue.Offer(t))
+                    if (!_flow.Offer(t))
                     {
                         OnError(BackpressureHelper.MissingBackpressureException("Queue full?!"));
                         return;
@@ -349,7 +351,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             internal void Clear()
             {
-                queue?.Clear();
+                _flow?.Clear();
             }
 
             internal void RequestOne()
