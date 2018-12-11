@@ -1,245 +1,46 @@
 ﻿using System;
-using Reactive.Streams;
+using AuxiliaryStack.Monads;
+using static AuxiliaryStack.Monads.Option;
 
 namespace AuxiliaryStack.Reactor.Core
 {
-    /// <summary>
-    /// Represents one of the reactive-streams signals.
-    /// </summary>
-    /// <typeparam name="T">The value type held</typeparam>
-    public interface ISignal<T>
+    public enum SignalType
     {
-        /// <summary>
-        /// Is this signal an OnNext? Use <see cref="Next"/> property get the actual value.
-        /// </summary>
-        bool IsNext { get; }
-
-        /// <summary>
-        /// Is this signal an OnError? Use <see cref="Error"/> property get the actual error.
-        /// </summary>
-        bool IsError { get; }
-
-        /// <summary>
-        /// Is this signal an OnComplete?
-        /// </summary>
-        bool IsComplete { get; }
-
-        /// <summary>
-        /// Returns the OnNext value if <see cref="IsNext"/> returns true or the type-default value otherwise.
-        /// </summary>
-        T Next { get; }
-
-        /// <summary>
-        /// Returns the OnError value if <see cref="IsError"/> returns true, null otherwise.
-        /// </summary>
-        Exception Error { get; }
+        Complete = 0,
+        Next = 1,
+        Error = 2
     }
 
-    /// <summary>
-    /// Utility methods to create and handle ISignal objects.
-    /// </summary>
-    public static class SignalHelper
+    public readonly struct Signal<T>
     {
-        /// <summary>
-        /// Create an OnNext signal.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public static ISignal<T> Next<T>(T value)
+        private readonly T _value;
+        private readonly Exception _error;
+        private readonly SignalType _type;
+
+        private Signal(T value, Exception error, SignalType type)
         {
-            return new SignalNext<T>(value);
+            _value = value;
+            _error = error;
+            _type = type;
         }
 
-        /// <summary>
-        /// Create an OnError signal.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="e"></param>
-        /// <returns></returns>
-        public static ISignal<T> Error<T>(Exception e)
-        {
-            return new SignalError<T>(e);
-        }
+        public SignalType Type => _type;
 
-        /// <summary>
-        /// Return the singleton OnComplete signal.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static ISignal<T> Complete<T>()
-        {
-            return SignalComplete<T>.Instance;
-        }
+        public bool IsNext => _type == SignalType.Next;
 
-        /// <summary>
-        /// Based on the signal type, call the appropriate ISubscriber method.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="s"></param>
-        /// <param name="signal"></param>
-        public static void Dispatch<T>(ISubscriber<T> s, ISignal<T> signal)
-        {
-            if (signal.IsNext)
-            {
-                s.OnNext(signal.Next);
-            }
-            else
-            if (signal.IsError)
-            {
-                s.OnError(signal.Error);
-            }
-            else
-            if (signal.IsComplete)
-            {
-                s.OnComplete();
-            }
-        }
-    }
+        public bool IsError => _type == SignalType.Error;
 
-    internal sealed class SignalNext<T> : ISignal<T>
-    {
-        readonly T value;
+        public bool IsComplete => _type == SignalType.Complete;
 
-        internal SignalNext(T value)
-        {
-            this.value = value;
-        }
+        public Option<T> Next => _type == SignalType.Next ? Just(_value) : None<T>();
 
-        public Exception Error
-        {
-            get
-            {
-                return null;
-            }
-        }
+        public Option<Exception> Error => _type == SignalType.Error ? Just(_error) : None<Exception>();
 
-        public bool IsComplete
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public static Signal<T> OfComplete() => new Signal<T>(default, default, SignalType.Complete);
+        
+        public static Signal<T> OfError(Exception ex) => new Signal<T>(default, ex, SignalType.Error);
+        
+        public static Signal<T> OfNext(T value) => new Signal<T>(value, default, SignalType.Next);
 
-        public bool IsError
-        {
-            get
-            {
-                return false;
-            }
-        }
-
-        public bool IsNext
-        {
-            get
-            {
-                return true;
-            }
-        }
-
-        public T Next
-        {
-            get
-            {
-                return value;
-            }
-        }
-    }
-
-    internal sealed class SignalError<T> : ISignal<T>
-    {
-        readonly Exception e;
-
-        internal SignalError(Exception e)
-        {
-            this.e = e;
-        }
-
-        public Exception Error
-        {
-            get
-            {
-                return e;
-            }
-        }
-
-        public bool IsComplete
-        {
-            get
-            {
-                return false;
-            }
-        }
-
-        public bool IsError
-        {
-            get
-            {
-                return true;
-            }
-        }
-
-        public bool IsNext
-        {
-            get
-            {
-                return false;
-            }
-        }
-
-        public T Next
-        {
-            get
-            {
-                return default(T);
-            }
-        }
-    }
-
-    internal sealed class SignalComplete<T> : ISignal<T>
-    {
-
-        internal static readonly SignalComplete<T> Instance = new SignalComplete<T>();
-
-        public Exception Error
-        {
-            get
-            {
-                return null;
-            }
-        }
-
-        public bool IsComplete
-        {
-            get
-            {
-                return true;
-            }
-        }
-
-        public bool IsError
-        {
-            get
-            {
-                return false;
-            }
-        }
-
-        public bool IsNext
-        {
-            get
-            {
-                return false;
-            }
-        }
-
-        public T Next
-        {
-            get
-            {
-                return default(T);
-            }
-        }
     }
 }

@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using AuxiliaryStack.Reactor.Core.Subscription;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {

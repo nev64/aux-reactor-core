@@ -1,6 +1,6 @@
 ﻿using System;
 using AuxiliaryStack.Reactor.Core.Subscriber;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
@@ -36,13 +36,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public override void OnComplete()
             {
-                actual.OnComplete();
+                _actual.OnComplete();
             }
 
             public override void OnError(Exception e)
             {
                 value = default(T);
-                actual.OnError(e);
+                _actual.OnError(e);
             }
 
             public override void OnNext(T t)
@@ -51,7 +51,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     hasValue = true;
                     value = t;
-                    actual.OnNext(t);
+                    _actual.OnNext(t);
                 }
                 else
                 {
@@ -67,7 +67,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         return;
                     }
 
-                    actual.OnNext(v);
+                    _actual.OnNext(v);
                 }
             }
         }

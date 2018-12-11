@@ -1,43 +1,34 @@
 ﻿using System;
 using AuxiliaryStack.Reactor.Core.Subscriber;
-using Reactive.Streams;
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
-    sealed class PublisherMaterialize<T> : IFlux<ISignal<T>>
+    sealed class PublisherMaterialize<T> : IFlux<Signal<T>>
     {
-        readonly IPublisher<T> source;
+        private readonly IPublisher<T> _source;
 
-        internal PublisherMaterialize(IPublisher<T> source)
+        internal PublisherMaterialize(IPublisher<T> source) => 
+            _source = source;
+
+        public void Subscribe(ISubscriber<Signal<T>> subscriber)
         {
-            this.source = source;
+            _source.Subscribe(new MaterializeSubscriber(subscriber));
         }
 
-        public void Subscribe(ISubscriber<ISignal<T>> s)
+        sealed class MaterializeSubscriber : BasicSinglePostCompleteSubscriber<T, Signal<T>>
         {
-            source.Subscribe(new MaterializeSubscriber(s));
-        }
-
-        sealed class MaterializeSubscriber : BasicSinglePostCompleteSubscriber<T, ISignal<T>>
-        {
-            public MaterializeSubscriber(ISubscriber<ISignal<T>> actual) : base(actual)
+            public MaterializeSubscriber(ISubscriber<Signal<T>> actual) : base(actual)
             {
             }
 
-            public override void OnComplete()
-            {
-                Complete(SignalHelper.Complete<T>());
-            }
+            public override void OnComplete() => Complete(Signal<T>.OfComplete());
 
-            public override void OnError(Exception e)
-            {
-                Complete(SignalHelper.Error<T>(e));
-            }
+            public override void OnError(Exception e) => Complete(Signal<T>.OfError(e));
 
-            public override void OnNext(T t)
+            public override void OnNext(T value)
             {
-                produced++;
-                actual.OnNext(SignalHelper.Next(t));
+                _produced++;
+                _actual.OnNext(Signal<T>.OfNext(value));
             }
         }
     }

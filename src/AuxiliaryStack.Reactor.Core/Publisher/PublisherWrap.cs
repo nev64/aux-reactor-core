@@ -1,4 +1,4 @@
-﻿using Reactive.Streams;
+﻿
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {

@@ -4,7 +4,7 @@ using System.Threading;
 using AuxiliaryStack.Reactor.Core.Subscriber;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
@@ -58,7 +58,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 list = null;
                 if (ls.Count != 0)
                 {
-                    actual.OnNext(ls);
+                    _actual.OnNext(ls);
                 }
                 Complete();
             }
@@ -75,7 +75,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 ls.Add(t);
                 if (ls.Count == size)
                 {
-                    actual.OnNext(ls);
+                    _actual.OnNext(ls);
                     list = new List<T>();
                 }
             }
@@ -85,7 +85,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 if (SubscriptionHelper.Validate(n))
                 {
                     long u = BackpressureHelper.MultiplyCap(n, size);
-                    s.Request(u);
+                    _subscription.Request(u);
                 }
             }
         }
@@ -116,7 +116,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 if (ls != null && ls.Count != 0)
                 {
-                    actual.OnNext(ls);
+                    _actual.OnNext(ls);
                 }
                 Complete();
             }
@@ -144,7 +144,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     if (ls.Count == size)
                     {
                         list = null;
-                        actual.OnNext(ls);
+                        _actual.OnNext(ls);
                     }
                 }
 
@@ -167,12 +167,12 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     {
                         long u = BackpressureHelper.MultiplyCap(n - 1, skip);
                         long v = BackpressureHelper.AddCap(u, size);
-                        s.Request(v);
+                        _subscription.Request(v);
                     }
                     else
                     {
                         long u = BackpressureHelper.MultiplyCap(n, skip);
-                        s.Request(u);
+                        _subscription.Request(u);
                     }
                 }
             }
@@ -210,7 +210,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     Interlocked.Add(ref requested, p);
                 }
-                BackpressureHelper.PostComplete<IList<T>>(ref requested, actual, lists, ref cancelled);
+                BackpressureHelper.PostComplete<IList<T>>(ref requested, _actual, lists, ref cancelled);
             }
 
             public override void OnError(Exception e)
@@ -245,7 +245,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                         produced--;
 
-                        actual.OnNext(inner);
+                        _actual.OnNext(inner);
                     }
                 }
 
@@ -263,18 +263,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (SubscriptionHelper.Validate(n))
                 {
-                    if (!BackpressureHelper.PostCompleteRequest<IList<T>>(ref requested, n, actual, lists, ref cancelled))
+                    if (!BackpressureHelper.PostCompleteRequest<IList<T>>(ref requested, n, _actual, lists, ref cancelled))
                     {
                         if (Volatile.Read(ref once) == 0 && Interlocked.CompareExchange(ref once, 1, 0) == 0)
                         {
                             long r = BackpressureHelper.MultiplyCap(n - 1, size - skip);
                             long u = BackpressureHelper.AddCap(r, size);
-                            s.Request(u);
+                            _subscription.Request(u);
                         }
                         else
                         {
                             long r = BackpressureHelper.MultiplyCap(n, size - skip);
-                            s.Request(r);
+                            _subscription.Request(r);
                         }
                     }
                 }

@@ -1,7 +1,7 @@
 ﻿using System;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Parallel
 {
@@ -72,7 +72,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             public override void OnNext(T t)
             {
-                if (done)
+                if (_isCompleted)
                 {
                     return;
                 }
@@ -90,7 +90,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                 }
                     
 
-                actual.OnNext(v);
+                _actual.OnNext(v);
             }
         }
 

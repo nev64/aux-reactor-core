@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Threading;
 using AuxiliaryStack.Reactor.Core.Util;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Subscription
 {

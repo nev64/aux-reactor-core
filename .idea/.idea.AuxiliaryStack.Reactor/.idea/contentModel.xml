@@ -25,11 +25,14 @@
             <e p="IMonoEmitter.cs" t="Include" />
             <e p="IOrderedItem.cs" t="Include" />
             <e p="IParallelFlux.cs" t="Include" />
-            <e p="IReactiveStreams.cs" t="Include" />
+            <e p="IProcessor.cs" t="Include" />
+            <e p="IPublisher.cs" t="Include" />
             <e p="IScheduler.cs" t="Include" />
             <e p="IScheduling.cs" t="Include" />
             <e p="ISignal.cs" t="Include" />
             <e p="ISignalEmitter.cs" t="Include" />
+            <e p="ISubscriber.cs" t="Include" />
+            <e p="ISubscription.cs" t="Include" />
             <e p="ITimeSource.cs" t="Include" />
             <e p="ITimedScheduler.cs" t="Include" />
             <e p="ITimedScheduling.cs" t="Include" />

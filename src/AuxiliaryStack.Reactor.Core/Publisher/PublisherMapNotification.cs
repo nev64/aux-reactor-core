@@ -1,7 +1,7 @@
 ﻿using System;
 using AuxiliaryStack.Reactor.Core.Subscriber;
 using AuxiliaryStack.Reactor.Core.Util;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
@@ -52,7 +52,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public override void OnNext(T t)
             {
-                produced++;
+                _produced++;
 
                 IPublisher<R> p;
 
@@ -66,7 +66,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     return;
                 }
 
-                actual.OnNext(p);
+                _actual.OnNext(p);
             }
 
             public override void OnError(Exception e)

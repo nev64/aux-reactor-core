@@ -1,7 +1,7 @@
 ﻿using System;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscriber;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Parallel
 {
@@ -67,13 +67,13 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             {
                 if (!TryOnNext(t))
                 {
-                    s.Request(1);
+                    _subscription.Request(1);
                 }
             }
 
             public bool TryOnNext(IOrderedItem<T> t)
             {
-                if (done)
+                if (_isCompleted)
                 {
                     return false;
                 }
@@ -92,7 +92,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                 if (b)
                 {
-                    actual.OnNext(t);
+                    _actual.OnNext(t);
                     return true;
                 }
                 return false;

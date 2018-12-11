@@ -1,78 +1,63 @@
 ﻿using System;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Subscriber;
-using Reactive.Streams;
+using static AuxiliaryStack.Monads.Option;
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
     sealed class PublisherDematerialize<T> : IFlux<T>
     {
-        readonly IPublisher<ISignal<T>> source;
+        private readonly IPublisher<Signal<T>> _source;
 
-        internal PublisherDematerialize(IPublisher<ISignal<T>> source)
+        internal PublisherDematerialize(IPublisher<Signal<T>> source) => _source = source;
+
+        public void Subscribe(ISubscriber<T> subscriber) =>
+            _source.Subscribe(new DematerializeSubscriber(subscriber));
+
+        sealed class DematerializeSubscriber : BasicSubscriber<Signal<T>, T>
         {
-            this.source = source;
-        }
+            private Option<Signal<T>> _latestSignal;
 
-        public void Subscribe(ISubscriber<T> s)
-        {
-            source.Subscribe(new DematerializeSubscriber(s));
-        }
+            public DematerializeSubscriber(ISubscriber<T> actual) : base(actual) => _latestSignal = None<Signal<T>>();
 
-        sealed class DematerializeSubscriber : BasicSubscriber<ISignal<T>, T>, ISubscription
-        {
-            ISignal<T> value;
+            protected override void AfterSubscribe() => _subscription.Request(1);
 
-            public DematerializeSubscriber(ISubscriber<T> actual) : base(actual)
+            public override void OnComplete() => Complete();
+
+            public override void OnError(Exception e) => Error(e);
+
+            public override void OnNext(Signal<T> signal)
             {
-            }
-
-            protected override void AfterSubscribe()
-            {
-                s.Request(1);
-            }
-
-            public override void OnComplete()
-            {
-                Complete();
-            }
-
-            public override void OnError(Exception e)
-            {
-                Error(e);
-            }
-
-            public override void OnNext(ISignal<T> t)
-            {
-                if (done)
+                if (_isCompleted)
                 {
                     return;
                 }
 
-                var s = value;
+                var latestSignal = _latestSignal;
 
-                if (s != null)
+                if (latestSignal.IsJust)
                 {
-                    if (s.IsNext)
+                    var value = latestSignal.GetValue();
+                    if (value.IsNext)
                     {
-                        actual.OnNext(s.Next);
+                        _actual.OnNext(value.Next.GetValue());
                     }
-                    else
-                    if (s.IsError)
+                    else if (value.IsError)
                     {
-                        value = null;
-                        this.s.Cancel();
-                        Error(s.Error);
+                        _latestSignal = None<Signal<T>>();
+                        _subscription.Cancel();
+                        Error(value.Error.GetValue());
                         return;
                     }
                     else
                     {
-                        this.s.Cancel();
+                        _subscription.Cancel();
                         Complete();
                         return;
                     }
                 }
 
-                value = t;
+                _latestSignal = Just(signal);
             }
         }
     }

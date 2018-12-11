@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using AuxiliaryStack.Reactor.Core.Subscriber;
 using AuxiliaryStack.Reactor.Core.Subscription;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
@@ -66,30 +66,30 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public override void OnComplete()
             {
-                if (done)
+                if (_isCompleted)
                 {
                     return;
                 }
-                done = true;
+                _isCompleted = true;
                 enumerator.Dispose();
-                actual.OnComplete();
+                _actual.OnComplete();
             }
 
             public override void OnError(Exception e)
             {
-                if (done)
+                if (_isCompleted)
                 {
                     ExceptionHelper.OnErrorDropped(e);
                     return;
                 }
-                done = true;
+                _isCompleted = true;
                 enumerator.Dispose();
-                actual.OnComplete();
+                _actual.OnComplete();
             }
 
             public override void OnNext(T t)
             {
-                if (done)
+                if (_isCompleted)
                 {
                     return;
                 }
@@ -111,7 +111,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                     if (!b)
                     {
-                        s.Cancel();
+                        _subscription.Cancel();
                         Complete();
                         return;
                     }
@@ -134,7 +134,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     return;
                 }
 
-                actual.OnNext(r);
+                _actual.OnNext(r);
             }
         }
     }

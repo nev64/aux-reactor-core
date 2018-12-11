@@ -1,6 +1,6 @@
 ﻿using System;
 using AuxiliaryStack.Reactor.Core.Subscription;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Subscriber
 {
@@ -8,44 +8,31 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
     /// Base class for subscribers with an actual ISubscriber, a done flag and
     /// a sequentially set ISubscription.
     /// </summary>
-    /// <typeparam name="T">The input value type</typeparam>
-    /// <typeparam name="U">The output value type</typeparam>
-    internal abstract class BasicSubscriber<T, U> : ISubscriber<T>, ISubscription
+    /// <typeparam name="TSub">The input value type</typeparam>
+    /// <typeparam name="TPub">The output value type</typeparam>
+    internal abstract class BasicSubscriber<TSub, TPub> : ISubscriber<TSub>, ISubscription
     {
-        /// <summary>
-        /// The actual child ISubscriber.
-        /// </summary>
-        protected readonly ISubscriber<U> actual;
+        protected readonly ISubscriber<TPub> _actual;
+        protected bool _isCompleted;
+        protected ISubscription _subscription;
 
-        protected bool done;
+        internal BasicSubscriber(ISubscriber<TPub> actual) => _actual = actual;
 
-        protected ISubscription s;
-
-        internal BasicSubscriber(ISubscriber<U> actual)
-        {
-            this.actual = actual;
-        }
-
-        public virtual void Cancel()
-        {
-            s.Cancel();
-        }
+        public virtual void Cancel() => _subscription.Cancel();
 
         public abstract void OnComplete();
 
         public abstract void OnError(Exception e);
 
-        public abstract void OnNext(T t);
+        public abstract void OnNext(TSub t);
 
-        public void OnSubscribe(ISubscription s)
+        public void OnSubscribe(ISubscription subscription)
         {
-            if (SubscriptionHelper.Validate(ref this.s, s))
+            if (SubscriptionHelper.Validate(ref _subscription, subscription))
             {
-
-
                 if (BeforeSubscribe())
                 {
-                    actual.OnSubscribe(this);
+                    _actual.OnSubscribe(this);
 
                     AfterSubscribe();
                 }
@@ -54,7 +41,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
 
         public virtual void Request(long n)
         {
-            s.Request(n);
+            _subscription.Request(n);
         }
 
         /// <summary>
@@ -80,12 +67,12 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// </summary>
         protected void Complete()
         {
-            if (done)
+            if (_isCompleted)
             {
                 return;
             }
-            done = true;
-            actual.OnComplete();
+            _isCompleted = true;
+            _actual.OnComplete();
         }
 
         /// <summary>
@@ -93,13 +80,13 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// </summary>
         protected void Error(Exception ex)
         {
-            if (done)
+            if (_isCompleted)
             {
                 ExceptionHelper.OnErrorDropped(ex);
                 return;
             }
-            done = true;
-            actual.OnError(ex);
+            _isCompleted = true;
+            _actual.OnError(ex);
         }
 
         /// <summary>
@@ -110,7 +97,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         protected void Fail(Exception ex)
         {
             ExceptionHelper.ThrowIfFatal(ex);
-            s.Cancel();
+            _subscription.Cancel();
             OnError(ex);
         }
     }

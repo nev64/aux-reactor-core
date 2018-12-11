@@ -1,76 +1,60 @@
 ﻿using System.Threading;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Util;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
-    sealed class PublisherRange : IFlux<int>
+    internal sealed class PublisherRange : IFlux<int>
     {
-        readonly int start;
-
-        readonly int end;
+        private readonly int _start;
+        private readonly int _end;
 
         internal PublisherRange(int start, int count)
         {
-            this.start = start;
-            this.end = start + count;
+            _start = start;
+            _end = start + count;
         }
 
-        public void Subscribe(ISubscriber<int> s)
+        public void Subscribe(ISubscriber<int> subscriber)
         {
-            if (s is IConditionalSubscriber<int>)
+            if (subscriber is IConditionalSubscriber<int> conditionalSubscriber)
             {
-                s.OnSubscribe(new RangeConditionalSubscription((IConditionalSubscriber<int>)s, start, end));
+                subscriber.OnSubscribe(new RangeConditionalSubscription(conditionalSubscriber, _start, _end));
             }
             else
             {
-                s.OnSubscribe(new RangeSubscription(s, start, end));
+                subscriber.OnSubscribe(new RangeSubscription(subscriber, _start, _end));
             }
         }
 
         abstract class RangeBaseSubscription : IQueueSubscription<int>
         {
-            protected readonly int end;
+            protected readonly int _end;
+            protected int _index;
+            protected long _requested;
+            protected bool _isCancelled;
 
-            protected int index;
-
-            protected long requested;
-
-            protected bool cancelled;
-
-            internal RangeBaseSubscription(int start, int end)
+            protected RangeBaseSubscription(int start, int end)
             {
-                this.index = start;
-                this.end = end;
+                _index = start;
+                _end = end;
             }
 
-            public void Cancel()
-            {
-                Volatile.Write(ref cancelled, true);
-            }
+            public void Cancel() => Volatile.Write(ref _isCancelled, true);
 
-            public void Clear()
-            {
-                index = end;
-            }
+            public void Clear() => _index = _end;
 
-            public bool IsEmpty()
-            {
-                return index == end;
-            }
+            public bool IsEmpty() => _index == _end;
 
-            public bool Offer(int value)
-            {
-                return FuseableHelper.DontCallOffer();
-            }
+            public bool Offer(int value) => FuseableHelper.DontCallOffer();
 
             public bool Poll(out int value)
             {
-                int i = index;
-                if (i != end)
+                var i = _index;
+                if (i != _end)
                 {
-                    index = i + 1;
+                    _index = i + 1;
                     value = i;
                     return true;
                 }
@@ -80,7 +64,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public void Request(long n)
             {
-                if (BackpressureHelper.ValidateAndAddCap(ref requested, n) == 0L)
+                if (BackpressureHelper.ValidateAndAddCap(ref _requested, n) == 0L)
                 {
                     if (n == long.MaxValue)
                     {
@@ -95,89 +79,82 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected abstract void FastPath();
 
-            protected abstract void SlowPath(long r);
+            protected abstract void SlowPath(long requested);
 
-            public int RequestFusion(int mode)
-            {
-                return mode & FuseableHelper.SYNC;
-            }
-
+            public int RequestFusion(int mode) => mode & FuseableHelper.SYNC;
         }
 
-        sealed class RangeSubscription : RangeBaseSubscription
+        sealed class RangeSubscription: RangeBaseSubscription
         {
-            readonly ISubscriber<int> actual;
+            private readonly ISubscriber<int> _actual;
 
-
-            internal RangeSubscription(ISubscriber<int> actual, int start, int end) : base(start, end)
-            {
-                this.actual = actual;
-            }
+            internal RangeSubscription(ISubscriber<int> actual, int start, int end) : base(start, end) => 
+                _actual = actual;
 
             protected override void FastPath()
             {
-                int e = end;
-                var a = actual;
+                var end = _end;
+                var actual = _actual;
 
-                for (int i = index; i != e; i++)
+                for (var i = _index; i != end; i++)
                 {
-                    if (Volatile.Read(ref cancelled))
+                    if (Volatile.Read(ref _isCancelled))
                     {
                         return;
                     }
 
-                    a.OnNext(i);
+                    actual.OnNext(i);
                 }
 
-                if (Volatile.Read(ref cancelled))
+                if (Volatile.Read(ref _isCancelled))
                 {
                     return;
                 }
-                a.OnComplete();
+                actual.OnComplete();
             }
 
-            protected override void SlowPath(long r)
+            protected override void SlowPath(long requested)
             {
-                long e = 0L;
-                int i = index;
-                int f = end;
-                var a = actual;
+                var end = 0L;
+                var index = _index;
+                var rangeEnd = _end;
+                var actual = _actual;
 
                 for (;;)
                 {
 
-                    while (e != r && i != f)
+                    while (end != requested && index != rangeEnd)
                     {
-                        if (Volatile.Read(ref cancelled))
+                        if (Volatile.Read(ref _isCancelled))
                         {
                             return;
                         }
 
-                        a.OnNext(i);
+                        actual.OnNext(index);
 
-                        i++;
-                        e++;
+                        index++;
+                        end++;
                     }
 
-                    if (i == f)
+                    if (index == rangeEnd)
                     {
-                        if (!Volatile.Read(ref cancelled))
+                        if (!Volatile.Read(ref _isCancelled))
                         {
-                            a.OnComplete();
+                            actual.OnComplete();
                         }
                         return;
                     }
 
-                    r = Volatile.Read(ref requested);
-                    if (e == r)
+                    requested = Volatile.Read(ref _requested);
+                    if (end == requested)
                     {
-                        index = i;
-                        r = Interlocked.Add(ref requested, -e);
-                        if (r == 0L)
+                        _index = index;
+                        requested = Interlocked.Add(ref _requested, -end);
+                        if (requested == 0L)
                         {
                             break;
                         }
-                        e = 0L;
+                        end = 0L;
                     }
                 }
             }
@@ -185,79 +162,78 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
         sealed class RangeConditionalSubscription : RangeBaseSubscription
         {
-            readonly IConditionalSubscriber<int> actual;
+            private readonly IConditionalSubscriber<int> _actual;
 
-            internal RangeConditionalSubscription(IConditionalSubscriber<int> actual, int start, int end) : base(start, end)
-            {
-                this.actual = actual;
-            }
+            internal RangeConditionalSubscription(IConditionalSubscriber<int> actual, int start, int end) 
+                : base(start, end) => 
+                _actual = actual;
 
             protected override void FastPath()
             {
-                int e = end;
-                var a = actual;
+                var end = _end;
+                var actual = _actual;
 
-                for (int i = index; i != e; i++)
+                for (int i = _index; i != end; i++)
                 {
-                    if (Volatile.Read(ref cancelled))
+                    if (Volatile.Read(ref _isCancelled))
                     {
                         return;
                     }
 
-                    a.TryOnNext(i);
+                    actual.TryOnNext(i);
                 }
 
-                if (Volatile.Read(ref cancelled))
+                if (Volatile.Read(ref _isCancelled))
                 {
                     return;
                 }
-                a.OnComplete();
+                actual.OnComplete();
             }
 
-            protected override void SlowPath(long r)
+            protected override void SlowPath(long requested)
             {
-                long e = 0L;
-                int i = index;
-                int f = end;
-                var a = actual;
+                var end = 0L;
+                var index = _index;
+                var rangeEnd = _end;
+                var actual = _actual;
 
                 for (;;)
                 {
 
-                    while (e != r && i != f)
+                    while (end != requested && index != rangeEnd)
                     {
-                        if (Volatile.Read(ref cancelled))
+                        if (Volatile.Read(ref _isCancelled))
                         {
                             return;
                         }
 
-                        if (a.TryOnNext(i))
+                        if (actual.TryOnNext(index))
                         {
-                            e++;
+                            end++;
                         }
 
-                        i++;
+                        index++;
                     }
 
-                    if (i == f)
+                    if (index == rangeEnd)
                     {
-                        if (!Volatile.Read(ref cancelled))
+                        if (!Volatile.Read(ref _isCancelled))
                         {
-                            a.OnComplete();
+                            actual.OnComplete();
                         }
                         return;
                     }
 
-                    r = Volatile.Read(ref requested);
-                    if (e == r)
+                    requested = Volatile.Read(ref _requested);
+                    if (end == requested)
                     {
-                        index = i;
-                        r = Interlocked.Add(ref requested, -e);
-                        if (r == 0L)
+                        _index = index;
+                        requested = Interlocked.Add(ref _requested, -end);
+                        if (requested == 0L)
                         {
                             break;
                         }
-                        e = 0L;
+                        end = 0L;
                     }
                 }
             }

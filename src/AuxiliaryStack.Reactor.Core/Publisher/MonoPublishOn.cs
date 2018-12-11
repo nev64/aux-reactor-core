@@ -1,116 +1,92 @@
 ﻿using System;
 using AuxiliaryStack.Reactor.Core.Flow;
-using Reactive.Streams;
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
-    sealed class MonoPublishOn<T> : IMono<T>
+    internal sealed class MonoPublishOn<T> : IMono<T>
     {
-        readonly IMono<T> source;
-
-        readonly IScheduler scheduler;
+        private readonly IMono<T> _source;
+        private readonly IScheduler _scheduler;
 
         internal MonoPublishOn(IMono<T> source, IScheduler scheduler)
         {
-            this.source = source;
-            this.scheduler = scheduler;
+            _source = source;
+            _scheduler = scheduler;
         }
 
         public void Subscribe(ISubscriber<T> s)
         {
-            source.Subscribe(new PublishOnSubscriber(s, scheduler));
+            _source.Subscribe(new PublishOnSubscriber(s, _scheduler));
         }
 
-        sealed class PublishOnSubscriber : ISubscriber<T>, IQueueSubscription<T>
+        private sealed class PublishOnSubscriber : ISubscriber<T>, IQueueSubscription<T>
         {
-            readonly ISubscriber<T> actual;
-
-            readonly IScheduler scheduler;
-
-            ISubscription s;
-
-            bool hasValue;
-            bool valueTaken;
-
-            T value;
-
+            private readonly ISubscriber<T> _actual;
+            private readonly IScheduler _scheduler;
+            private ISubscription _subscription;
+            private bool _hasValue;
+            private bool _isValueTaken;
+            private T _value;
+            
             internal PublishOnSubscriber(ISubscriber<T> actual, IScheduler scheduler)
             {
-                this.actual = actual;
-                this.scheduler = scheduler;
+                _actual = actual;
+                _scheduler = scheduler;
             }
 
-            public void Cancel()
-            {
-                s.Cancel();
-            }
+            public void Cancel() => _subscription.Cancel();
 
             public void OnComplete()
             {
-                if (!hasValue)
+                if (!_hasValue)
                 {
-                    scheduler.Schedule(() => actual.OnComplete());
+                    _scheduler.Schedule(() => _actual.OnComplete());
                 }
             }
 
-            public void OnError(Exception e)
-            {
-                scheduler.Schedule(() => actual.OnError(e));
-            }
+            public void OnError(Exception e) => _scheduler.Schedule(() => _actual.OnError(e));
 
             public void OnNext(T t)
             {
-                hasValue = true;
-                value = t;
-                scheduler.Schedule(() =>
+                _hasValue = true;
+                _value = t;
+                _scheduler.Schedule(() =>
                 {
-                    actual.OnNext(value);
-                    actual.OnComplete();
+                    _actual.OnNext(_value);
+                    _actual.OnComplete();
                 });
             }
 
-            public void OnSubscribe(ISubscription s)
+            public void OnSubscribe(ISubscription subscription)
             {
-                this.s = s;
-                actual.OnSubscribe(this);
+                _subscription = subscription;
+                _actual.OnSubscribe(this);
             }
 
-            public void Request(long n)
-            {
-                s.Request(n);
-            }
+            public void Request(long n) => _subscription.Request(n);
 
-            public int RequestFusion(int mode)
-            {
-                return mode & FuseableHelper.ASYNC;
-            }
+            public int RequestFusion(int mode) => mode & FuseableHelper.ASYNC;
 
-            public bool Offer(T value)
-            {
-                return FuseableHelper.DontCallOffer();
-            }
+            public bool Offer(T value) => FuseableHelper.DontCallOffer();
 
             public bool Poll(out T value)
             {
-                if (!valueTaken)
+                if (!_isValueTaken)
                 {
-                    valueTaken = true;
-                    value = this.value;
+                    _isValueTaken = true;
+                    value = _value;
                     return true;
                 }
-                value = default(T);
+                value = default;
                 return false;
             }
 
-            public bool IsEmpty()
-            {
-                return !hasValue || valueTaken;
-            }
+            public bool IsEmpty() => !_hasValue || _isValueTaken;
 
             public void Clear()
             {
-                hasValue = false;
-                value = default(T);
+                _hasValue = false;
+                _value = default;
             }
         }
     }

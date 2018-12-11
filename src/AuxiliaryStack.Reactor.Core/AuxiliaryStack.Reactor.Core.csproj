@@ -6,11 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Reactive.Streams" Version="1.0.2" />
+    <None Remove="AuxiliaryStack.Reactor.Core.csproj.DotSettings" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="AuxiliaryStack.Reactor.Core.csproj.DotSettings" />
+    <PackageReference Include="AuxiliaryStack.Monads" Version="1.0.0" />
   </ItemGroup>
 
 </Project>

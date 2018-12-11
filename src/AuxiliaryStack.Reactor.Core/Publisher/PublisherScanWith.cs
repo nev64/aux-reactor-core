@@ -1,7 +1,7 @@
 ﻿using System;
 using AuxiliaryStack.Reactor.Core.Subscriber;
 using AuxiliaryStack.Reactor.Core.Subscription;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
@@ -57,15 +57,15 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             public override void OnError(Exception e)
             {
                 value = default(A);
-                actual.OnError(e);
+                _actual.OnError(e);
             }
 
             public override void OnNext(T t)
             {
-                produced++;
+                _produced++;
 
                 var v = value;
-                actual.OnNext(v);
+                _actual.OnNext(v);
 
                 try
                 {

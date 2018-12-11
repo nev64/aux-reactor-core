@@ -1,6 +1,6 @@
 ﻿using System;
 using AuxiliaryStack.Reactor.Core.Subscriber;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {

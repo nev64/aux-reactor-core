@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 using AuxiliaryStack.Reactor.Core.Subscription;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Subscriber
 {

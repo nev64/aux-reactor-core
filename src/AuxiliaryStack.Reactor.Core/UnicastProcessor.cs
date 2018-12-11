@@ -3,7 +3,7 @@ using System.Threading;
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core
 {

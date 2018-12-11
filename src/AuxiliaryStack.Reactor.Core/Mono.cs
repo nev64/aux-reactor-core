@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using AuxiliaryStack.Reactor.Core.Publisher;
 using AuxiliaryStack.Reactor.Core.Scheduler;
 using AuxiliaryStack.Reactor.Core.Subscriber;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core
 {
@@ -631,7 +631,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <typeparam name="T">The value type.</typeparam>
         /// <param name="source">The source IMono instance.</param>
         /// <returns>The new IMono instance.</returns>
-        public static IMono<T> Dematerialize<T>(this IMono<ISignal<T>> source)
+        public static IMono<T> Dematerialize<T>(this IMono<Signal<T>> source)
         {
             // TODO implement Dematerialize
             throw new NotImplementedException();
@@ -1008,7 +1008,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <typeparam name="T">The value type.</typeparam>
         /// <param name="source">The source IMono instance.</param>
         /// <returns>The new IMono instance.</returns>
-        public static IMono<ISignal<T>> Materialize<T>(this IMono<T> source)
+        public static IMono<Signal<T>> Materialize<T>(this IMono<T> source)
         {
             // TODO implement Materialize
             throw new NotImplementedException();

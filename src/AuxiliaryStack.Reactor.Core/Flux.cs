@@ -1,4 +1,4 @@
-﻿using Reactive.Streams;
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -1888,7 +1888,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <typeparam name="T">The value type.</typeparam>
         /// <param name="source">The source IFlux with ISignal type.</param>
         /// <returns>The new IFlux instance.</returns>
-        public static IFlux<T> Dematerialize<T>(this IFlux<ISignal<T>> source)
+        public static IFlux<T> Dematerialize<T>(this IFlux<Signal<T>> source)
         {
             return new PublisherDematerialize<T>(source);
         }
@@ -2550,7 +2550,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <typeparam name="T">The value type.</typeparam>
         /// <param name="source">The source IFlux.</param>
         /// <returns>The new IFlux with ISignal element type.</returns>
-        public static IFlux<ISignal<T>> Materialize<T>(this IFlux<T> source)
+        public static IFlux<Signal<T>> Materialize<T>(this IFlux<T> source)
         {
             return new PublisherMaterialize<T>(source);
         }

@@ -2,33 +2,30 @@
 using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 using AuxiliaryStack.Reactor.Core.Util;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core.Subscriber
 {
     /// <summary>
     /// Base class for operators that want to signal one extra value after the 
     /// upstream has completed.
-    /// Call <seealso cref="Complete(R)"/> to signal the post-complete value.
+    /// Call <seealso cref="Complete(TPub)"/> to signal the post-complete value.
     /// </summary>
-    /// <typeparam name="T">The input value type.</typeparam>
-    /// <typeparam name="R">The output value type</typeparam>
-    internal abstract class BasicSinglePostCompleteSubscriber<T, R> : BasicSubscriber<T, R>, IQueue<R>
+    /// <typeparam name="TSub">The input value type.</typeparam>
+    /// <typeparam name="TPub">The output value type</typeparam>
+    internal abstract class BasicSinglePostCompleteSubscriber<TSub, TPub> : BasicSubscriber<TSub, TPub>, IQueue<TPub>
     {
-        R last;
-
-        bool hasValue;
-
-        long requested;
-
-        bool cancelled;
+        private TPub _last;
+        private bool _hasValue;
+        private long _requested;
+        private bool _isCancelled;
 
         /// <summary>
         /// Tracks the amount produced before completion.
         /// </summary>
-        protected long produced;
+        protected long _produced;
 
-        public BasicSinglePostCompleteSubscriber(ISubscriber<R> actual) : base(actual)
+        protected BasicSinglePostCompleteSubscriber(ISubscriber<TPub> actual) : base(actual)
         {
         }
 
@@ -36,25 +33,25 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// Prepares the value to be the post-complete value.
         /// </summary>
         /// <param name="value">The value to signal post-complete.</param>
-        public void Complete(R value)
+        protected void Complete(TPub value)
         {
-            long p = produced;
+            var p = _produced;
             if (p != 0L)
             {
                 Produced(p);
             }
-            last = value;
-            hasValue = true;
-            BackpressureHelper.PostComplete(ref requested, actual, this, ref cancelled);
+            _last = value;
+            _hasValue = true;
+            BackpressureHelper.PostComplete(ref _requested, _actual, this, ref _isCancelled);
         }
 
         public sealed override void Request(long n)
         {
             if (SubscriptionHelper.Validate(n))
             {
-                if (!BackpressureHelper.PostCompleteRequest(ref requested, n, actual, this, ref cancelled))
+                if (!BackpressureHelper.PostCompleteRequest(ref _requested, n, _actual, this, ref _isCancelled))
                 {
-                    s.Request(n);
+                    _subscription.Request(n);
                 }
             }
         }
@@ -63,43 +60,34 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// Atomically subtract the given amount from the requested amount.
         /// </summary>
         /// <param name="n">The value to subtract, positive (not verified)</param>
-        protected void Produced(long n)
-        {
-            Interlocked.Add(ref requested, -n);
-        }
+        private void Produced(long n) => Interlocked.Add(ref _requested, -n);
 
-        public bool Offer(R value)
-        {
-            return FuseableHelper.DontCallOffer();
-        }
+        public bool Offer(TPub value) => FuseableHelper.DontCallOffer();
 
-        public bool Poll(out R value)
+        public bool Poll(out TPub value)
         {
-            if (hasValue)
+            if (_hasValue)
             {
-                hasValue = false;
-                value = last;
-                last = default(R);
+                _hasValue = false;
+                value = _last;
+                _last = default;
                 return true;
             }
-            value = default(R);
+            value = default;
             return false;
         }
 
-        public bool IsEmpty()
-        {
-            return !hasValue;
-        }
+        public bool IsEmpty() => !_hasValue;
 
         public void Clear()
         {
-            last = default(R);
-            hasValue = false;
+            _last = default;
+            _hasValue = false;
         }
 
         public sealed override void Cancel()
         {
-            Volatile.Write(ref cancelled, true);
+            Volatile.Write(ref _isCancelled, true);
             base.Cancel();
         }
     }

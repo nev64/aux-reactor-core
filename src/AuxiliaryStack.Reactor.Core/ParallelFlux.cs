@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using AuxiliaryStack.Reactor.Core.Parallel;
-using Reactive.Streams;
+
 
 namespace AuxiliaryStack.Reactor.Core
 {
