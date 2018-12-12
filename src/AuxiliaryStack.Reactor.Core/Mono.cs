@@ -25,28 +25,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <typeparam name="T">The value type</typeparam>
         /// <param name="value">The unique data to emit</param>
         /// <returns>The new IPublisher instance</returns>
-        public static IMono<T> Just<T>(T value)
-        {
-            var xxx = Mono.Just(1);
-            
-            return new PublisherJust<T>(value);
-        }
-
-        private class MonoObject<T, TMono> : IMono<T>
-            where TMono: IMono<T>
-        {
-            private readonly TMono _mono;
-
-            public MonoObject(TMono mono)
-            {
-                _mono = mono;
-            }
-            
-            public void Subscribe(ISubscriber<T> subscriber)
-            {
-                _mono.Subscribe(subscriber);
-            }
-        }
+        public static IMono<T> Just<T>(T value) => new PublisherJust<T>(value);
 
         /// <summary>
         /// Returns an empty instance which completes the ISubscribers immediately.
@@ -230,10 +209,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <typeparam name="T">The value type.</typeparam>
         /// <param name="action">The action</param>
         /// <returns>The new IMono instance.</returns>
-        public static IMono<T> From<T>(Action action)
-        {
-            return new PublisherAction<T>(action);
-        }
+        public static IMono<T> From<T>(Action action) => new FromAction<T>(action);
 
         /// <summary>
         /// Create a new {@link Mono} that ignores onNext (dropping them) and 

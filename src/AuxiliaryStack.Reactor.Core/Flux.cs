@@ -547,7 +547,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <returns>The IFlux instance</returns>
         public static IFlux<T> From<T>(Task<T> task)
         {
-            return new PublisherFromTask<T>(task);
+            return new FromTask<T>(task);
         }
 
         /// <summary>
@@ -559,7 +559,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <returns>The IMono instance</returns>
         public static IFlux<T> From<T>(Action action)
         {
-            return new PublisherAction<T>(action);
+            return new FromAction<T>(action);
         }
 
         /// <summary>
