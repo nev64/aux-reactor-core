@@ -186,10 +186,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// </summary>
         /// <param name="task">The tast to use as source.</param>
         /// <returns>The new IMono instance.</returns>
-        public static IMono<Unit> From(Task task)
-        {
-            return new FromTask(task);
-        }
+        public static IMono<Unit> From(Task task) => new FromTask(task);
 
         /// <summary>
         /// Creates a IMono instance from the task which
@@ -198,10 +195,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// </summary>
         /// <param name="task">The tast to use as source.</param>
         /// <returns>The new IMono instance.</returns>
-        public static IMono<T> From<T>(Task<T> task)
-        {
-            return new FromTask<T>(task);
-        }
+        public static IMono<T> From<T>(Task<T> task) => new FromTask<T>(task);
 
         /// <summary>
         /// Executes the given action for each subscriber and completes
@@ -210,7 +204,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <typeparam name="T">The value type.</typeparam>
         /// <param name="action">The action</param>
         /// <returns>The new IMono instance.</returns>
-        public static IMono<T> From<T>(Action action) => new FromAction<T>(action);
+        public static IMono<Unit> From(Action action) => new FromAction(action);
 
         /// <summary>
         /// Create a new {@link Mono} that ignores onNext (dropping them) and 

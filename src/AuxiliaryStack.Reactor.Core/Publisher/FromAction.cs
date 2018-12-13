@@ -5,7 +5,7 @@ using AuxiliaryStack.Reactor.Core.Subscription;
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
-    sealed class FromAction<T>: IFlux<T>, IMono<T>
+    sealed class FromAction : IFlux<Unit>, IMono<Unit>
     {
         private readonly Action _action;
 
@@ -14,19 +14,26 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             _action = action;
         }
 
-        public void Subscribe(ISubscriber<T> subscriber)
+        public void Subscribe(ISubscriber<Unit> subscriber)
         {
+            subscriber.OnSubscribe(Subscriptions.Empty<Unit>());
             try
             {
                 _action();
+                subscriber.OnNext(Unit.Instance);
+            }
+            catch (SystemException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                ExceptionHelper.ThrowIfFatal(ex);
-                EmptySubscription<T>.Error(subscriber, ex);
-                return;
+                subscriber.OnError(ex);
             }
-            EmptySubscription<T>.Complete(subscriber);
+            finally
+            {
+                subscriber.OnComplete();
+            }
         }
     }
 }

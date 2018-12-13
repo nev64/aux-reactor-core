@@ -534,10 +534,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// </summary>
         /// <param name="task">The tast to use as source.</param>
         /// <returns>The IFlux instance</returns>
-        public static IFlux<Unit> From(Task task)
-        {
-            return new FromTask(task);
-        }
+        public static IFlux<Unit> From(Task task) => new FromTask(task);
 
         /// <summary>
         /// Creates a IFlux instance from the task which
@@ -546,23 +543,18 @@ namespace AuxiliaryStack.Reactor.Core
         /// </summary>
         /// <param name="task">The tast to use as source.</param>
         /// <returns>The IFlux instance</returns>
-        public static IFlux<T> From<T>(Task<T> task)
-        {
-            return new FromTask<T>(task);
-        }
+        public static IFlux<T> From<T>(Task<T> task) => new FromTask<T>(task);
 
         /// <summary>
         /// Executes the given action for each subscriber and completes
         /// or signals an Exception if the action threw.
         /// </summary>
-        /// <typeparam name="T">The value type.</typeparam>
         /// <param name="action">The action</param>
         /// <returns>The IMono instance</returns>
-        public static IFlux<T> From<T>(Action action)
-        {
-            return new FromAction<T>(action);
-        }
+        public static IFlux<Unit> From(Action action) => new FromAction(action);
 
+        public static IFlux<Unit> From(params Action[] actions) => new FromActions(actions);
+        
         /// <summary>
         /// Emits the value returned by the supplier function to each individual subscriber.
         /// </summary>
