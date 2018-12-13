@@ -559,14 +559,14 @@ namespace AuxiliaryStack.Reactor.Core
         /// Emits the value returned by the supplier function to each individual subscriber.
         /// </summary>
         /// <typeparam name="T">The emitted value type.</typeparam>
-        /// <param name="supplier">The function that is called for each subscriber to return a value to be emitted.</param>
+        /// <param name="generator">The function that is called for each subscriber to return a value to be emitted.</param>
         /// <param name="nullMeansEmpty">If the supplier returns null, should that be considered as empty source?
         /// Note that value types don't have a notion of null and their default value is considered a normal value.</param>
         /// <returns></returns>
-        public static IFlux<T> From<T>(Func<T> supplier, bool nullMeansEmpty = false)
-        {
-            return new PublisherFunc<T>(supplier, nullMeansEmpty);
-        }
+        public static IFlux<T> From<T>(Func<T> generator) => new FromFunc<T>(generator);
+
+        public static IFlux<T> From<T>(Func<T> generator, bool nullMeansEmpty) where T : class => 
+            nullMeansEmpty ? (IFlux<T>) new FromNullFactoryFunc<T>(generator) : new FromFunc<T>(generator);
 
         /// <summary>
         /// Generates signals when the downstream requests values in a stateless manner.

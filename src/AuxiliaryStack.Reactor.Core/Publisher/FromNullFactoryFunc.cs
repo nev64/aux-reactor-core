@@ -1,31 +1,35 @@
 ﻿using System;
-using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Subscription;
-
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
-    sealed class FromAction : IFlux<Unit>, IMono<Unit>
+    sealed class FromNullFactoryFunc<T> : IFlux<T>, IMono<T>
+        where T : class
     {
-        private readonly Action _action;
+        private readonly Func<T> _supplier;
 
-        public FromAction(Action action)
+        public FromNullFactoryFunc(Func<T> supplier)
         {
-            _action = action;
+            _supplier = supplier;
         }
 
-        public void Subscribe(ISubscriber<Unit> subscriber)
+        public void Subscribe(ISubscriber<T> subscriber)
         {
-            subscriber.OnSubscribe(Subscriptions.Empty<Unit>());
+            subscriber.OnSubscribe(Subscriptions.Empty<T>());
 
             try
             {
-                _action();
+                var result = _supplier();
+                if (result == null)
+                {
+                    return;
+                }
+
                 try
                 {
-                    subscriber.OnNext(Unit.Instance);
+                    subscriber.OnNext(result);
                 }
-                catch (Exception)
+                catch
                 {
                     // ignored
                 }

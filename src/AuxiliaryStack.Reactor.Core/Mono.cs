@@ -175,10 +175,10 @@ namespace AuxiliaryStack.Reactor.Core
         /// <param name="nullMeansEmpty">If true and T is a class, returning null
         /// from the function is interpreted as an empty source.</param>
         /// <returns>The new IMono instance.</returns>
-        public static IMono<T> From<T>(Func<T> generator, bool nullMeansEmpty = false)
-        {
-            return new PublisherFunc<T>(generator, nullMeansEmpty);
-        }
+        public static IMono<T> From<T>(Func<T> generator) => new FromFunc<T>(generator);
+
+        public static IMono<T> From<T>(Func<T> generator, bool nullMeansEmpty) where T : class => 
+            nullMeansEmpty ? (IMono<T>) new FromNullFactoryFunc<T>(generator) : new FromFunc<T>(generator);
 
         /// <summary>
         /// Creates a valueless IMono instance from the task which
