@@ -82,6 +82,7 @@
           <e p="PublishProcessor.cs" t="Include" />
           <e p="Publisher" t="Include">
             <e p="FromAction.cs" t="Include" />
+            <e p="FromTask.cs" t="Include" />
             <e p="MonoPublishOn.cs" t="Include" />
             <e p="PublisherAll.cs" t="Include" />
             <e p="PublisherAmb.cs" t="Include" />
@@ -119,7 +120,6 @@
             <e p="PublisherFlatMap.cs" t="Include" />
             <e p="PublisherFlattenEnumerable.cs" t="Include" />
             <e p="PublisherFromObservable.cs" t="Include" />
-            <e p="PublisherFromTask.cs" t="Include" />
             <e p="PublisherFunc.cs" t="Include" />
             <e p="PublisherGenerate.cs" t="Include" />
             <e p="PublisherGroupBy.cs" t="Include" />
@@ -263,6 +263,9 @@
           <e p="PublishOnTest.cs" t="Include" />
           <e p="PublishProcessorTest.cs" t="Include" />
           <e p="PublishSelectorTest.cs" t="Include" />
+          <e p="Publisher" t="Include">
+            <e p="FromTests.cs" t="Include" />
+          </e>
           <e p="ReduceTest.cs" t="Include" />
           <e p="SampleTest.cs" t="Include" />
           <e p="ScanTest.cs" t="Include" />

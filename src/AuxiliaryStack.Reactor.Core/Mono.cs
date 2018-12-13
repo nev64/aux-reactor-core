@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Publisher;
 using AuxiliaryStack.Reactor.Core.Scheduler;
 using AuxiliaryStack.Reactor.Core.Subscriber;
@@ -185,9 +186,9 @@ namespace AuxiliaryStack.Reactor.Core
         /// </summary>
         /// <param name="task">The tast to use as source.</param>
         /// <returns>The new IMono instance.</returns>
-        public static IMono<Void> From(Task task)
+        public static IMono<Unit> From(Task task)
         {
-            return new PublisherFromTask(task);
+            return new FromTask(task);
         }
 
         /// <summary>
@@ -199,7 +200,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <returns>The new IMono instance.</returns>
         public static IMono<T> From<T>(Task<T> task)
         {
-            return new PublisherFromTask<T>(task);
+            return new FromTask<T>(task);
         }
 
         /// <summary>

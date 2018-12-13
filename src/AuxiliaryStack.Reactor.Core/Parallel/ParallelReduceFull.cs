@@ -146,7 +146,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                 {
                     Cancel();
                     ex = ExceptionHelper.Terminate(ref error);
-                    actual.OnError(ex);
+                    _actual.OnError(ex);
                 }
                 else
                 {

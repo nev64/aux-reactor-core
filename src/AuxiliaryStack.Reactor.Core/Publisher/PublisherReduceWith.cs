@@ -61,7 +61,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             public override void OnError(Exception e)
             {
                 value = default(A);
-                actual.OnError(e);
+                _actual.OnError(e);
             }
 
             public override void OnNext(T t)

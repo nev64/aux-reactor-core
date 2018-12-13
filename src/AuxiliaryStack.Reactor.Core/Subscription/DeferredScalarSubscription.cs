@@ -17,7 +17,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// <summary>
         /// The actual downstream subscriber.
         /// </summary>
-        protected readonly ISubscriber<T> actual;
+        protected readonly ISubscriber<T> _actual;
 
         /// <summary>
         /// The current state.
@@ -50,7 +50,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// <param name="actual">The ISubscriber to send signals to.</param>
         public DeferredScalarSubscription(ISubscriber<T> actual)
         {
-            this.actual = actual;
+            this._actual = actual;
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// <param name="ex">The exception to signal</param>
         public virtual void Error(Exception ex)
         {
-            actual.OnError(ex);
+            _actual.OnError(ex);
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// </summary>
         public virtual void Complete()
         {
-            actual.OnComplete();
+            _actual.OnComplete();
         }
 
         /// <summary>
@@ -93,11 +93,11 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
                         fusionState = HAS_VALUE;
                     }
 
-                    actual.OnNext(v);
+                    _actual.OnNext(v);
 
                     if (Volatile.Read(ref state) != CANCELLED)
                     {
-                        actual.OnComplete();
+                        _actual.OnComplete();
                     }
 
                     return;
@@ -135,11 +135,11 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
                             fusionState = HAS_VALUE;
                         }
 
-                        actual.OnNext(v);
+                        _actual.OnNext(v);
 
                         if (Volatile.Read(ref state) != CANCELLED)
                         {
-                            actual.OnComplete();
+                            _actual.OnComplete();
                         }
 
                         return;

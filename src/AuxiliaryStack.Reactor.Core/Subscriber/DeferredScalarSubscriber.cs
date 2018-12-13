@@ -40,7 +40,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         {
             if (SubscriptionHelper.Validate(ref this.s, s))
             {
-                actual.OnSubscribe(this);
+                _actual.OnSubscribe(this);
 
                 OnStart();
             }

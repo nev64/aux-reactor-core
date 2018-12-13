@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
+using AuxiliaryStack.Monads;
 using AuxiliaryStack.Reactor.Core.Publisher;
 using AuxiliaryStack.Reactor.Core.Scheduler;
 using AuxiliaryStack.Reactor.Core.Subscriber;
@@ -533,9 +534,9 @@ namespace AuxiliaryStack.Reactor.Core
         /// </summary>
         /// <param name="task">The tast to use as source.</param>
         /// <returns>The IFlux instance</returns>
-        public static IFlux<Void> From(Task task)
+        public static IFlux<Unit> From(Task task)
         {
-            return new PublisherFromTask(task);
+            return new FromTask(task);
         }
 
         /// <summary>

@@ -45,14 +45,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
                 else
                 {
-                    actual.OnComplete();
+                    _actual.OnComplete();
                 }
             }
 
             public override void OnError(Exception e)
             {
                 value = default(T);
-                actual.OnError(e);
+                _actual.OnError(e);
             }
 
             public override void OnNext(T t)
