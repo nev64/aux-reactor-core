@@ -4,7 +4,7 @@ using AuxiliaryStack.Reactor.Core.Subscription;
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
-    sealed class FromActions : IFlux<Unit>
+    sealed class FromActions : IFlux<int>
     {
         private readonly Action[] _actions;
 
@@ -13,9 +13,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             _actions = actions;
         }
 
-        public void Subscribe(ISubscriber<Unit> subscriber)
+        public void Subscribe(ISubscriber<int> subscriber)
         {
-            subscriber.OnSubscribe(Subscriptions.Empty<Unit>());
+            subscriber.OnSubscribe(Subscriptions.Empty<int>());
             try
             {
                 for (var i = 0; i < _actions.Length; i++)
@@ -23,7 +23,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     try
                     {
                         _actions[i]();
-                        subscriber.OnNext(Unit.Instance);
+                        try
+                        {
+                            subscriber.OnNext(i);
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
                     }
                     catch (SystemException)
                     {

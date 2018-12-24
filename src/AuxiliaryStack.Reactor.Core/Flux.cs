@@ -165,7 +165,7 @@ namespace AuxiliaryStack.Reactor.Core
             IPublisher<T3> p3,
             Func<T1, T2, T3, R> combiner, bool delayError = false)
         {
-            return CombineLatest<object, R>(a => combiner((T1)a[0], (T2)a[1], (T3)a[2]),
+            return CombineLatest(a => combiner((T1)a[0], (T2)a[1], (T3)a[2]),
                 BufferSize, delayError,
                 Box(p1), Box(p2), Box(p3)
             );
@@ -490,17 +490,18 @@ namespace AuxiliaryStack.Reactor.Core
         /// <returns>The new IFlux instance.</returns>
         public static IFlux<T> From<T>(params T[] values)
         {
-            int n = values.Length;
-            ;
+            var n = values.Length;
+            
             if (n == 0)
             {
                 return Empty<T>();
             }
-            else
+
             if (n == 1)
             {
                 return Just(values[0]);
             }
+            
             return new PublisherArray<T>(values);
         }
 
@@ -553,7 +554,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <returns>The IMono instance</returns>
         public static IFlux<Unit> From(Action action) => new FromAction(action);
 
-        public static IFlux<Unit> From(params Action[] actions) => new FromActions(actions);
+        public static IFlux<int> From(params Action[] actions) => new FromActions(actions);
         
         /// <summary>
         /// Emits the value returned by the supplier function to each individual subscriber.
