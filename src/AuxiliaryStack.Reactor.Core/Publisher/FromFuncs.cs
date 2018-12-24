@@ -1,39 +1,37 @@
 ﻿using System;
+using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Subscription;
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
-    sealed class FromActions : IFlux<int>
+    sealed class FromFuncs<T> : IFlux<T>, IMono<T>
     {
-        private readonly Action[] _actions;
+        private readonly Func<T>[] _suppliers;
 
-        public FromActions(Action[] actions)
+        public FromFuncs(params Func<T>[] suppliers)
         {
-            _actions = actions;
+            _suppliers = suppliers;
         }
 
-        public void Subscribe(ISubscriber<int> subscriber)
+        public void Subscribe(ISubscriber<T> subscriber)
         {
-            subscriber.OnSubscribe(Subscriptions.Empty<int>());
+            subscriber.OnSubscribe(Subscriptions.Empty<T>());
+
             try
             {
-                for (var i = 0; i < _actions.Length; i++)
+                for (var i = 0; i < _suppliers.Length; i++)
                 {
                     try
                     {
-                        _actions[i]();
+                        var result = _suppliers[i]();
                         try
                         {
-                            subscriber.OnNext(i);
+                            subscriber.OnNext(result);
                         }
                         catch
                         {
                             // ignored
                         }
-                    }
-                    catch (SystemException)
-                    {
-                        throw;
                     }
                     catch (Exception ex)
                     {

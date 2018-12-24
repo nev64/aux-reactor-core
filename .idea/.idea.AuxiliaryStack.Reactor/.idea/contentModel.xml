@@ -82,9 +82,11 @@
           <e p="ParallelFlux.cs" t="Include" />
           <e p="PublishProcessor.cs" t="Include" />
           <e p="Publisher" t="Include">
+            <e p="DelegateInvocationException.cs" t="Include" />
             <e p="FromAction.cs" t="Include" />
             <e p="FromActions.cs" t="Include" />
             <e p="FromFunc.cs" t="Include" />
+            <e p="FromFuncs.cs" t="Include" />
             <e p="FromNullFactoryFunc.cs" t="Include" />
             <e p="FromTask.cs" t="Include" />
             <e p="MonoPublishOn.cs" t="Include" />
