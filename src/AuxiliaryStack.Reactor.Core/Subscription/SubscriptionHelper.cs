@@ -284,10 +284,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
                 // deliberately ignored
             }
 
-            public int RequestFusion(int mode)
-            {
-                return FuseableHelper.NONE;
-            }
+            public FusionMode RequestFusion(FusionMode mode) => FusionMode.None;
         }
 
     }

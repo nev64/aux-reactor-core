@@ -46,13 +46,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             internal CollectSubscriber(ISubscriber<C> actual, C collection, Action<C, T> collector) : base(actual)
             {
-                this.value = collection;
+                this._value = collection;
                 this.collector = collector;
             }
 
             public override void OnComplete()
             {
-                Complete(value);
+                Complete(_value);
             }
 
             public override void OnError(Exception e)
@@ -64,7 +64,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 try
                 {
-                    collector(value, t);
+                    collector(_value, t);
                 }
                 catch (Exception ex)
                 {
@@ -75,7 +75,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected override void OnStart()
             {
-                s.Request(long.MaxValue);
+                _subscription.Request(long.MaxValue);
             }
         }
     }

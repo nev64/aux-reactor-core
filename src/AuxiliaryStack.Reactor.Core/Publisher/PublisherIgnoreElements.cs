@@ -85,9 +85,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 // ignored, always empty
             }
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
-                return mode & FuseableHelper.ASYNC;
+                return mode & FusionMode.Async;
             }
         }
     }

@@ -29,7 +29,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected override void OnStart()
             {
-                s.Request(long.MaxValue);
+                _subscription.Request(long.MaxValue);
             }
 
             public override void OnComplete()
@@ -60,7 +60,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     return;
                 }
                 done = true;
-                s.Cancel();
+                _subscription.Cancel();
                 Complete(true);
             }
         }

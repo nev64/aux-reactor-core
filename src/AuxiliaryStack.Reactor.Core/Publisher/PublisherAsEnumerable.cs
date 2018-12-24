@@ -49,7 +49,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             IFlow<T> _flow;
 
-            int sourceMode;
+            FusionMode _sourceMode;
 
             Exception error;
 
@@ -81,29 +81,28 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 this.limit = prefetch - (prefetch >> 2);
             }
 
-            public void OnSubscribe(ISubscription s)
+            public void OnSubscribe(ISubscription subscription)
             {
-                if (SubscriptionHelper.SetOnce(ref this.s, s))
+                if (SubscriptionHelper.SetOnce(ref this.s, subscription))
                 {
-                    var qs = s as IFlowSubscription<T>;
-                    if (qs != null)
+                    if (subscription is IFlowSubscription<T> flow)
                     {
-                        int m = qs.RequestFusion(FuseableHelper.ANY | FuseableHelper.BOUNDARY);
+                        var mode = flow.RequestFusion(FusionMode.Any | FusionMode.Boundary);
 
-                        if (m == FuseableHelper.SYNC)
+                        if (mode == FusionMode.Sync)
                         {
-                            this.sourceMode = m;
-                            this._flow = qs;
+                            _sourceMode = mode;
+                            _flow = flow;
                             Volatile.Write(ref done, true);
                             return;
                         }
-                        else
-                        if (m == FuseableHelper.ASYNC)
-                        {
-                            this.sourceMode = m;
-                            this._flow = qs;
 
-                            s.Request(prefetch < 0 ? long.MaxValue : prefetch);
+                        if (mode == FusionMode.Async)
+                        {
+                            _sourceMode = mode;
+                            _flow = flow;
+
+                            subscription.Request(prefetch < 0 ? long.MaxValue : prefetch);
 
                             return;
 
@@ -112,7 +111,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                     _flow = QueueDrainHelper.CreateQueue<T>(prefetch);
 
-                    s.Request(prefetch < 0 ? long.MaxValue : prefetch);
+                    subscription.Request(prefetch < 0 ? long.MaxValue : prefetch);
                 }
             }
 
@@ -123,7 +122,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     return;
                 }
 
-                if (sourceMode != FuseableHelper.ASYNC)
+                if (_sourceMode != FusionMode.Async)
                 {
                     if (!_flow.Offer(t))
                     {
@@ -206,7 +205,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     else
                     {
                         current = elem.GetValue();
-                        if (sourceMode != FuseableHelper.SYNC)
+                        if (_sourceMode != FusionMode.Sync)
                         {
                             int c = consumed + 1;
                             if (c == limit)
@@ -224,15 +223,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public void Reset()
-            {
-                throw new InvalidOperationException("Reset is not supported");
-            }
+            public void Reset() => throw new InvalidOperationException("Reset is not supported");
 
-            public void Dispose()
-            {
-                SubscriptionHelper.Cancel(ref s);
-            }
+            public void Dispose() => SubscriptionHelper.Cancel(ref s);
         }
     }
 }

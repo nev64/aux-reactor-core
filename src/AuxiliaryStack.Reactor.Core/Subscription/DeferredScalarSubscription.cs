@@ -11,7 +11,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
     /// Can hold onto a single value that may appear later
     /// and emits it on request.
     /// </summary>
-    /// <typeparam name="T">The value type.</typeparam>
+    /// <typeparam name="T">Type of the value.</typeparam>
     public class DeferredScalarSubscription<T> : IFlowSubscription<T>
     {
         /// <summary>
@@ -22,7 +22,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// <summary>
         /// The current state.
         /// </summary>
-        protected int state;
+        protected int _state;
 
         static readonly int NO_REQUEST_NO_VALUE = 0;
         static readonly int NO_REQUEST_HAS_VALUE = 1;
@@ -33,7 +33,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// </summary>
         protected static readonly int CANCELLED = 4;
 
-        int fusionState;
+        int _fusionState;
 
         static readonly int EMPTY = 1;
         static readonly int HAS_VALUE = 2;
@@ -42,15 +42,15 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// <summary>
         /// The value storage.
         /// </summary>
-        protected T value;
+        protected T _value;
 
         /// <summary>
         /// Constructs a DeferredScalarSubscription with the target ISubscriber.
         /// </summary>
         /// <param name="actual">The ISubscriber to send signals to.</param>
-        public DeferredScalarSubscription(ISubscriber<T> actual)
+        protected DeferredScalarSubscription(ISubscriber<T> actual)
         {
-            this._actual = actual;
+            _actual = actual;
         }
 
         /// <summary>
@@ -80,30 +80,30 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         {
             for (;;)
             {
-                int s = Volatile.Read(ref state);
+                int s = Volatile.Read(ref _state);
                 if (s == CANCELLED || s == NO_REQUEST_HAS_VALUE || s == HAS_REQUEST_HAS_VALUE)
                 {
                     return;
                 }
                 if (s == HAS_REQUEST_NO_VALUE)
                 {
-                    if (fusionState == EMPTY)
+                    if (_fusionState == EMPTY)
                     {
-                        value = v;
-                        fusionState = HAS_VALUE;
+                        _value = v;
+                        _fusionState = HAS_VALUE;
                     }
 
                     _actual.OnNext(v);
 
-                    if (Volatile.Read(ref state) != CANCELLED)
+                    if (Volatile.Read(ref _state) != CANCELLED)
                     {
                         _actual.OnComplete();
                     }
 
                     return;
                 }
-                value = v;
-                if (Interlocked.CompareExchange(ref state, NO_REQUEST_HAS_VALUE, NO_REQUEST_NO_VALUE) == HAS_REQUEST_HAS_VALUE)
+                _value = v;
+                if (Interlocked.CompareExchange(ref _state, NO_REQUEST_HAS_VALUE, NO_REQUEST_NO_VALUE) == HAS_REQUEST_HAS_VALUE)
                 {
                     break;
                 }
@@ -119,25 +119,25 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
             }
             for (;;)
             {
-                int s = Volatile.Read(ref state);
+                int s = Volatile.Read(ref _state);
                 if (s == CANCELLED || s == HAS_REQUEST_NO_VALUE || s == HAS_REQUEST_HAS_VALUE)
                 {
                     return;
                 }
                 if (s == NO_REQUEST_HAS_VALUE)
                 {
-                    if (Interlocked.CompareExchange(ref state, HAS_REQUEST_HAS_VALUE, NO_REQUEST_HAS_VALUE) == NO_REQUEST_HAS_VALUE)
+                    if (Interlocked.CompareExchange(ref _state, HAS_REQUEST_HAS_VALUE, NO_REQUEST_HAS_VALUE) == NO_REQUEST_HAS_VALUE)
                     {
-                        T v = value;
+                        T v = _value;
 
-                        if (fusionState == EMPTY)
+                        if (_fusionState == EMPTY)
                         {
-                            fusionState = HAS_VALUE;
+                            _fusionState = HAS_VALUE;
                         }
 
                         _actual.OnNext(v);
 
-                        if (Volatile.Read(ref state) != CANCELLED)
+                        if (Volatile.Read(ref _state) != CANCELLED)
                         {
                             _actual.OnComplete();
                         }
@@ -146,7 +146,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
                     }
                     return;
                 }
-                if (Interlocked.CompareExchange(ref state, HAS_REQUEST_NO_VALUE, NO_REQUEST_NO_VALUE) == NO_REQUEST_NO_VALUE)
+                if (Interlocked.CompareExchange(ref _state, HAS_REQUEST_NO_VALUE, NO_REQUEST_NO_VALUE) == NO_REQUEST_NO_VALUE)
                 {
                     break;
                 }
@@ -155,12 +155,12 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
 
 
         /// <inheritdoc/>
-        public int RequestFusion(int mode)
+        public FusionMode RequestFusion(FusionMode mode)
         {
-            int m = mode & FuseableHelper.ASYNC;
-            if (m != 0)
+            var m = mode & FusionMode.Async;
+            if (m != FusionMode.None)
             {
-                fusionState = EMPTY;
+                _fusionState = EMPTY;
             }
             return m;
         }
@@ -174,10 +174,10 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// <inheritdoc/>
         public Option<T> Poll()
         {    
-            if (fusionState == HAS_VALUE)
+            if (_fusionState == HAS_VALUE)
             {
-                fusionState = COMPLETE;
-                return Just(value);
+                _fusionState = COMPLETE;
+                return Just(_value);
             }
             return None<T>();
         }
@@ -185,20 +185,20 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         /// <inheritdoc/>
         public bool IsEmpty()
         {
-            return fusionState != HAS_VALUE;
+            return _fusionState != HAS_VALUE;
         }
 
         /// <inheritdoc/>
         public void Clear()
         {
-            value = default(T);
-            fusionState = COMPLETE;
+            _value = default(T);
+            _fusionState = COMPLETE;
         }
 
         /// <inheritdoc/>
         public virtual void Cancel()
         {
-            Volatile.Write(ref state, CANCELLED);
+            Volatile.Write(ref _state, CANCELLED);
         }
     }
 }

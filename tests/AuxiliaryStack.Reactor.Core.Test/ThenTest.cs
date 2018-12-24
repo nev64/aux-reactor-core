@@ -16,8 +16,8 @@ namespace AuxiliaryStack.Reactor.Core.Test
         public void Then_EmptyVoid_Fused()
         {
             Flux.Range(1, 10).Then(Mono.Empty<Void>())
-                .Test(fusionMode: FuseableHelper.ANY)
-                .AssertFusionMode(FuseableHelper.ASYNC)
+                .Test(fusionMode: FusionMode.Any)
+                .AssertFusionMode(FusionMode.Async)
                 .AssertResult();
         }
     }

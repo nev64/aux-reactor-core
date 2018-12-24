@@ -34,7 +34,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected override void OnStart()
             {
-                s.Request(long.MaxValue);
+                _subscription.Request(long.MaxValue);
             }
 
 
@@ -79,7 +79,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
                 if (b)
                 {
-                    s.Cancel();
+                    _subscription.Cancel();
                     done = true;
                     Complete(true);
                 }

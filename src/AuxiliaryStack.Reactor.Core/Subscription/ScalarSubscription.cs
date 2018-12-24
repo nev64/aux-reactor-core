@@ -34,14 +34,14 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         }
 
         /// <inheritdoc/>
-        public int RequestFusion(int mode)
+        public FusionMode RequestFusion(FusionMode mode)
         {
-            if ((mode & FuseableHelper.SYNC) != 0)
+            if ((mode & FusionMode.Sync) != 0)
             {
-                return FuseableHelper.SYNC;
+                return FusionMode.Sync;
             }
 
-            return FuseableHelper.NONE;
+            return FusionMode.None;
         }
 
         /// <inheritdoc/>

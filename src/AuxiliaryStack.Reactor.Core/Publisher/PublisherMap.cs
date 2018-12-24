@@ -75,7 +75,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         public override Option<R> Poll() =>
             qs.Poll().Map(mapper);
 
-        public override int RequestFusion(int mode)
+        public override FusionMode RequestFusion(FusionMode mode)
         {
             return TransitiveBoundaryFusion(mode);
         }
@@ -125,7 +125,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         public override Option<R> Poll() =>
             qs.Poll().Map(mapper);
 
-        public override int RequestFusion(int mode)
+        public override FusionMode RequestFusion(FusionMode mode)
         {
             return TransitiveBoundaryFusion(mode);
         }

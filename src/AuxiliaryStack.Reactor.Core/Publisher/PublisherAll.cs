@@ -6,41 +6,37 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 {
     sealed class PublisherAll<T> : IMono<bool>
     {
-        readonly IPublisher<T> source;
-
-        readonly Func<T, bool> predicate;
+        private readonly IPublisher<T> _source;
+        private readonly Func<T, bool> _predicate;
 
         public PublisherAll(IPublisher<T> source, Func<T, bool> predicate)
         {
-            this.source = source;
-            this.predicate = predicate;
+            _source = source;
+            _predicate = predicate;
         }
 
-        public void Subscribe(ISubscriber<bool> s)
-        {
-            source.Subscribe(new AllSubscriber(s, predicate));
-        }
+        public void Subscribe(ISubscriber<bool> subscriber) => 
+            _source.Subscribe(new AllSubscriber(subscriber, _predicate));
 
-        sealed class AllSubscriber : DeferredScalarSubscriber<T, bool>
+        private sealed class AllSubscriber : DeferredScalarSubscriber<T, bool>
         {
-            readonly Func<T, bool> predicate;
-
-            bool done;
+            private readonly Func<T, bool> _predicate;
+            private bool _isDone;
 
             public AllSubscriber(ISubscriber<bool> actual, Func<T, bool> predicate) : base(actual)
             {
-                this.predicate = predicate;
+                _predicate = predicate;
             }
 
             protected override void OnStart()
             {
-                s.Request(long.MaxValue);
+                _subscription.Request(long.MaxValue);
             }
 
 
             public override void OnComplete()
             {
-                if (done)
+                if (_isDone)
                 {
                     return;
                 }
@@ -49,18 +45,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public override void OnError(Exception e)
             {
-                if (done)
+                if (_isDone)
                 {
                     ExceptionHelper.OnErrorDropped(e);
                     return;
                 }
-                done = true;
+                _isDone = true;
                 Error(e);
             }
 
-            public override void OnNext(T t)
+            public override void OnNext(T value)
             {
-                if (done)
+                if (_isDone)
                 {
                     return;
                 }
@@ -69,18 +65,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 try
                 {
-                    b = predicate(t);
+                    b = _predicate(value);
                 }
                 catch (Exception ex)
                 {
-                    done = true;
+                    _isDone = true;
                     Fail(ex);
                     return;
                 }
                 if (!b)
                 {
-                    s.Cancel();
-                    done = true;
+                    _subscription.Cancel();
+                    _isDone = true;
                     Complete(false);
                 }
             }

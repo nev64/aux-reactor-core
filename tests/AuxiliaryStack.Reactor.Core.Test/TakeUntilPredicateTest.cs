@@ -24,8 +24,8 @@ namespace AuxiliaryStack.Reactor.Core.Test
         public void TakeUntilPredicate_Normal_Fused()
         {
             Flux.Range(1, 10).TakeUntil(v => v == 5)
-                .Test(fusionMode: FuseableHelper.ANY)
-                .AssertFusionMode(FuseableHelper.SYNC)
+                .Test(fusionMode: FusionMode.Any)
+                .AssertFusionMode(FusionMode.Sync)
                 .AssertResult(1, 2, 3, 4, 5);
         }
 
@@ -34,8 +34,8 @@ namespace AuxiliaryStack.Reactor.Core.Test
         {
             Flux.Range(1, 10).TakeUntil(v => v == 5)
                 .Filter(v => true)
-                .Test(fusionMode: FuseableHelper.ANY)
-                .AssertFusionMode(FuseableHelper.SYNC)
+                .Test(fusionMode: FusionMode.Any)
+                .AssertFusionMode(FusionMode.Sync)
                 .AssertResult(1, 2, 3, 4, 5);
         }
 

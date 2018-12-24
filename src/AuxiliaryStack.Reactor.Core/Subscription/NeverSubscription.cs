@@ -58,13 +58,13 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         }
 
         /// <inheritdoc />
-        public int RequestFusion(int mode)
+        public FusionMode RequestFusion(FusionMode mode)
         {
-            if ((mode & FuseableHelper.ASYNC) != 0)
+            if ((mode & FusionMode.Async) != 0)
             {
-                return FuseableHelper.ASYNC;
+                return FusionMode.Async;
             }
-            return FuseableHelper.NONE;
+            return FusionMode.None;
         }
     }
 }

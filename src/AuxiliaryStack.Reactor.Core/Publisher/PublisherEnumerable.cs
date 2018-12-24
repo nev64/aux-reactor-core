@@ -143,9 +143,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected abstract void SlowPath(long r);
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
-                return mode & FuseableHelper.SYNC;
+                return mode & FusionMode.Sync;
             }
 
         }

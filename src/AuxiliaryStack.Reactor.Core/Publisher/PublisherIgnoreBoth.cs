@@ -94,9 +94,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 actual.OnError(ex);
             }
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
-                return mode & FuseableHelper.ASYNC;
+                return mode & FusionMode.Async;
             }
 
             public bool Offer(R value)

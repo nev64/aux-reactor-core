@@ -29,14 +29,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected override void OnStart()
             {
-                s.Request(long.MaxValue);
+                _subscription.Request(long.MaxValue);
             }
 
             public override void OnComplete()
             {
                 if (hasValue)
                 {
-                    Complete(value);
+                    Complete(_value);
                 }
                 else
                 {
@@ -46,7 +46,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public override void OnError(Exception e)
             {
-                value = default(T);
+                _value = default(T);
                 Error(e);
             }
 
@@ -56,7 +56,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     hasValue = true;
                 }
-                value = t;
+                _value = t;
             }
         }
     }

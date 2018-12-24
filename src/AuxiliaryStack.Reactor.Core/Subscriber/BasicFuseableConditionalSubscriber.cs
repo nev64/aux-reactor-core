@@ -22,7 +22,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// </summary>
         protected IFlowSubscription<T> qs;
 
-        protected int fusionMode;
+        protected FusionMode fusionMode;
 
         internal BasicFuseableConditionalSubscriber(IConditionalSubscriber<U> actual)
         {
@@ -120,7 +120,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
             OnError(ex);
         }
 
-        public abstract int RequestFusion(int mode);
+        public abstract FusionMode RequestFusion(FusionMode mode);
 
         public bool Offer(U value)
         {
@@ -149,16 +149,16 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// </summary>
         /// <param name="mode">The incoming fusion mode.</param>
         /// <returns>The established fusion mode</returns>
-        protected int TransitiveAnyFusion(int mode)
+        protected FusionMode TransitiveAnyFusion(FusionMode mode)
         {
             var qs = this.qs;
             if (qs != null)
             {
-                int m = qs.RequestFusion(mode);
+                var m = qs.RequestFusion(mode);
                 fusionMode = m;
                 return m;
             }
-            return FuseableHelper.NONE;
+            return FusionMode.None;
         }
 
         /// <summary>
@@ -170,20 +170,20 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// </summary>
         /// <param name="mode">The incoming fusion mode.</param>
         /// <returns>The established fusion mode</returns>
-        protected int TransitiveBoundaryFusion(int mode)
+        protected FusionMode TransitiveBoundaryFusion(FusionMode mode)
         {
             var qs = this.qs;
             if (qs != null)
             {
-                if ((mode & FuseableHelper.BOUNDARY) != 0)
+                if ((mode & FusionMode.Boundary) != 0)
                 {
-                    return FuseableHelper.NONE;
+                    return FusionMode.None;
                 }
-                int m = qs.RequestFusion(mode);
+                var m = qs.RequestFusion(mode);
                 fusionMode = m;
                 return m;
             }
-            return FuseableHelper.NONE;
+            return FusionMode.None;
         }
     }
 }

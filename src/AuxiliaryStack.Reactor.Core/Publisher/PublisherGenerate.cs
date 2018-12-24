@@ -109,13 +109,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
-                if ((mode & FuseableHelper.BOUNDARY) != 0)
+                if ((mode & FusionMode.Boundary) != 0)
                 {
-                    return FuseableHelper.NONE;
+                    return FusionMode.None;
                 }
-                int m = mode & FuseableHelper.SYNC;
+                var m = mode & FusionMode.Sync;
                 fused = m != 0;
                 return m;
             }

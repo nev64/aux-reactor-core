@@ -13,7 +13,7 @@ namespace AuxiliaryStack.Reactor.Core.Test
             var ts = Flux.Range(1, 2)
                 .Take(1)
                 .PublishOn(ImmediateScheduler.Instance)
-                .Test(1, FuseableHelper.ANY);
+                .Test(1, FusionMode.Any);
 
             ts.AssertResult(1);
         }
@@ -47,7 +47,7 @@ namespace AuxiliaryStack.Reactor.Core.Test
         [Fact]
         public void Take_Exact_Number_Sync_Fused()
         {
-            Flux.Range(1, 5).Take(5).Test(fusionMode: FuseableHelper.SYNC)
+            Flux.Range(1, 5).Take(5).Test(fusionMode: FusionMode.Sync)
                 .AssertResult(1, 2, 3, 4, 5);
         }
 
@@ -57,7 +57,7 @@ namespace AuxiliaryStack.Reactor.Core.Test
             var up = new UnicastProcessor<int>();
             up.OnNext(1, 2, 3, 4, 5);
 
-            up.Take(5).Test(fusionMode: FuseableHelper.ASYNC)
+            up.Take(5).Test(fusionMode: FusionMode.Async)
                 .AssertResult(1, 2, 3, 4, 5);
         }
     }

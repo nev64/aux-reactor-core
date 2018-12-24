@@ -9,67 +9,52 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 {
     sealed class PublisherArray<T> : IFlux<T>
     {
-        readonly T[] array;
+        private readonly T[] _array;
 
         internal PublisherArray(T[] array)
         {
-            this.array = array;
+            _array = array;
         }
 
         public void Subscribe(ISubscriber<T> s)
         {
-            if (s is IConditionalSubscriber<T>)
+            if (s is IConditionalSubscriber<T> conditionalSubscriber)
             {
-                s.OnSubscribe(new ArrayConditionalSubscription((IConditionalSubscriber<T>)s, array));
+                s.OnSubscribe(new ArrayConditionalSubscription(conditionalSubscriber, _array));
             }
             else
             {
-                s.OnSubscribe(new ArraySubscription(s, array));
+                s.OnSubscribe(new ArraySubscription(s, _array));
             }
         }
 
         internal abstract class ArrayBaseSubscription : IFlowSubscription<T>
         {
-            protected readonly T[] array;
-
-            protected int index;
-
-            protected long requested;
-
-            protected bool cancelled;
+            protected readonly T[] _array;
+            protected int _index;
+            protected long _requested;
+            protected bool _isCancelled;
 
             internal ArrayBaseSubscription(T[] array)
             {
-                this.array = array;
+                _array = array;
             }
 
-            public void Cancel()
-            {
-                Volatile.Write(ref cancelled, true);
-            }
+            public void Cancel() => Volatile.Write(ref _isCancelled, true);
 
-            public void Clear()
-            {
-                index = array.Length;
-            }
+            public void Clear() => _index = _array.Length;
 
-            public bool IsEmpty()
-            {
-                return index == array.Length;
-            }
+            public bool IsEmpty() => _index == _array.Length;
 
-            public bool Offer(T value)
-            {
-                return FuseableHelper.DontCallOffer();
-            }
+            public bool Offer(T value) => FuseableHelper.DontCallOffer();
 
             public Option<T> Poll()
             {
-                var i = index;
-                var a = array;
+                var i = _index;
+                var a = _array;
                 if (i != a.Length)
                 {
-                    index = i + 1;
+                    _index = i + 1;
                     return Just(a[i]);
                 }
                 
@@ -78,7 +63,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public void Request(long n)
             {
-                if (BackpressureHelper.ValidateAndAddCap(ref requested, n) == 0L)
+                if (BackpressureHelper.ValidateAndAddCap(ref _requested, n) == 0L)
                 {
                     if (n == long.MaxValue)
                     {
@@ -95,32 +80,30 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected abstract void SlowPath(long r);
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
-                return mode & FuseableHelper.SYNC;
+                return mode & FusionMode.Sync;
             }
-
         }
 
         internal sealed class ArraySubscription : ArrayBaseSubscription
         {
-            readonly ISubscriber<T> actual;
-
+            private readonly ISubscriber<T> _actual;
 
             internal ArraySubscription(ISubscriber<T> actual, T[] array) : base(array)
             {
-                this.actual = actual;
+                _actual = actual;
             }
 
             protected override void FastPath()
             {
-                var b = array;
+                var b = _array;
                 int e = b.Length;
-                var a = actual;
+                var a = _actual;
 
-                for (int i = index; i != e; i++)
+                for (int i = _index; i != e; i++)
                 {
-                    if (Volatile.Read(ref cancelled))
+                    if (Volatile.Read(ref _isCancelled))
                     {
                         return;
                     }
@@ -128,7 +111,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     a.OnNext(b[i]);
                 }
 
-                if (Volatile.Read(ref cancelled))
+                if (Volatile.Read(ref _isCancelled))
                 {
                     return;
                 }
@@ -137,19 +120,19 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected override void SlowPath(long r)
             {
-                var b = array;
-                int f = b.Length;
+                var b = _array;
+                var f = b.Length;
 
-                long e = 0L;
-                int i = index;
-                var a = actual;
+                var e = 0L;
+                var i = _index;
+                var a = _actual;
 
                 for (;;)
                 {
 
                     while (e != r && i != f)
                     {
-                        if (Volatile.Read(ref cancelled))
+                        if (Volatile.Read(ref _isCancelled))
                         {
                             return;
                         }
@@ -162,18 +145,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                     if (i == f)
                     {
-                        if (!Volatile.Read(ref cancelled))
+                        if (!Volatile.Read(ref _isCancelled))
                         {
                             a.OnComplete();
                         }
                         return;
                     }
 
-                    r = Volatile.Read(ref requested);
+                    r = Volatile.Read(ref _requested);
                     if (e == r)
                     {
-                        index = i;
-                        r = Interlocked.Add(ref requested, -e);
+                        _index = i;
+                        r = Interlocked.Add(ref _requested, -e);
                         if (r == 0L)
                         {
                             break;
@@ -186,22 +169,22 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
         sealed class ArrayConditionalSubscription : ArrayBaseSubscription
         {
-            readonly IConditionalSubscriber<T> actual;
+            private readonly IConditionalSubscriber<T> _actual;
 
             internal ArrayConditionalSubscription(IConditionalSubscriber<T> actual, T[] array) : base(array)
             {
-                this.actual = actual;
+                _actual = actual;
             }
 
             protected override void FastPath()
             {
-                var b = array;
-                int e = b.Length;
-                var a = actual;
+                var b = _array;
+                var e = b.Length;
+                var a = _actual;
 
-                for (int i = index; i != e; i++)
+                for (var i = _index; i != e; i++)
                 {
-                    if (Volatile.Read(ref cancelled))
+                    if (Volatile.Read(ref _isCancelled))
                     {
                         return;
                     }
@@ -209,7 +192,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     a.TryOnNext(b[i]);
                 }
 
-                if (Volatile.Read(ref cancelled))
+                if (Volatile.Read(ref _isCancelled))
                 {
                     return;
                 }
@@ -218,19 +201,19 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected override void SlowPath(long r)
             {
-                var b = array;
-                int f = b.Length;
+                var b = _array;
+                var f = b.Length;
 
-                long e = 0L;
-                int i = index;
-                var a = actual;
+                var e = 0L;
+                var i = _index;
+                var a = _actual;
 
                 for (;;)
                 {
 
                     while (e != r && i != f)
                     {
-                        if (Volatile.Read(ref cancelled))
+                        if (Volatile.Read(ref _isCancelled))
                         {
                             return;
                         }
@@ -245,18 +228,18 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                     if (i == f)
                     {
-                        if (!Volatile.Read(ref cancelled))
+                        if (!Volatile.Read(ref _isCancelled))
                         {
                             a.OnComplete();
                         }
                         return;
                     }
 
-                    r = Volatile.Read(ref requested);
+                    r = Volatile.Read(ref _requested);
                     if (e == r)
                     {
-                        index = i;
-                        r = Interlocked.Add(ref requested, -e);
+                        _index = i;
+                        r = Interlocked.Add(ref _requested, -e);
                         if (r == 0L)
                         {
                             break;

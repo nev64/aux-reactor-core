@@ -81,7 +81,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected abstract void SlowPath(long requested);
 
-            public int RequestFusion(int mode) => mode & FuseableHelper.SYNC;
+            public FusionMode RequestFusion(FusionMode mode) => mode & FusionMode.Sync;
         }
 
         sealed class RangeSubscription: RangeBaseSubscription

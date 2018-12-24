@@ -24,8 +24,8 @@ namespace AuxiliaryStack.Reactor.Core.Test
         public void SkipWhile_Normal_Fused()
         {
             Flux.Range(1, 10).SkipWhile(v => v < 6)
-                .Test(fusionMode: FuseableHelper.ANY)
-                .AssertFusionMode(FuseableHelper.SYNC)
+                .Test(fusionMode: FusionMode.Any)
+                .AssertFusionMode(FusionMode.Async)
                 .AssertResult(6, 7, 8, 9, 10);
         }
 
@@ -34,8 +34,8 @@ namespace AuxiliaryStack.Reactor.Core.Test
         {
             Flux.Range(1, 10).SkipWhile(v => v < 6)
                 .Filter(v => true)
-                .Test(fusionMode: FuseableHelper.ANY)
-                .AssertFusionMode(FuseableHelper.SYNC)
+                .Test(fusionMode: FusionMode.Any)
+                .AssertFusionMode(FusionMode.Async)
                 .AssertResult(6, 7, 8, 9, 10);
         }
 

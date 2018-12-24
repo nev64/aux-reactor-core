@@ -11,27 +11,18 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 {
     internal sealed class ParallelUnorderedFork<T> : ParallelUnorderedFlux<T>
     {
-        readonly IPublisher<T> source;
-
-        readonly int parallelism;
-
-        readonly int prefetch;
-
+        private readonly IPublisher<T> _source;
+        private readonly int _parallelism;
+        private readonly int _prefetch;
 
         internal ParallelUnorderedFork(IPublisher<T> source, int parallelism, int prefetch)
         {
-            this.source = source;
-            this.parallelism = parallelism;
-            this.prefetch = prefetch;
+            _source = source;
+            _parallelism = parallelism;
+            _prefetch = prefetch;
         }
 
-        public override int Parallelism
-        {
-            get
-            {
-                return parallelism;
-            }
-        }
+        public override int Parallelism => _parallelism;
 
         public override void Subscribe(ISubscriber<T>[] subscribers)
         {
@@ -40,103 +31,85 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                 return;
             }
 
-            source.Subscribe(new UnorderedDispatcher(subscribers, prefetch));
+            _source.Subscribe(new UnorderedDispatcher(subscribers, _prefetch));
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 8)]
         sealed class UnorderedDispatcher : ISubscriber<T>
         {
-            readonly ISubscriber<T>[] subscribers;
-
-            readonly long[] requests;
-
-            readonly long[] emissions;
-
-            readonly int prefetch;
-
-            readonly int limit;
-
-            ISubscription s;
-
-            IFlow<T> _flow;
-
-            bool done;
-            Exception error;
-
-            bool cancelled;
-
-            int produced;
-
-            int sourceMode;
-
-            int index;
-
-            int subscriberCount;
-
-            Pad128 p0;
-
-            int wip;
-
-            Pad120 p1;
+            private readonly ISubscriber<T>[] _subscribers;
+            private readonly long[] _requests;
+            private readonly long[] _emissions;
+            private readonly int _prefetch;
+            private readonly int _limit;
+            private ISubscription _subscription;
+            private IFlow<T> _flow;
+            private bool _isDone;
+            private Exception _error;
+            private bool _isCancelled;
+            private int _produced;
+            private FusionMode _sourceMode;
+            private int _index;
+            private int _subscriberCount;
+            private Pad128 _p0;
+            private int _wip;
+            private Pad120 _p1;
 
             internal UnorderedDispatcher(ISubscriber<T>[] subscribers, int prefetch)
             {
-                this.subscribers = subscribers;
-                int n = subscribers.Length;
-                this.requests = new long[n];
-                this.emissions = new long[n];
-                this.prefetch = prefetch;
-                this.limit = prefetch - (prefetch >> 2);
+                _subscribers = subscribers;
+                _requests = new long[subscribers.Length];
+                _emissions = new long[subscribers.Length];
+                _prefetch = prefetch;
+                _limit = prefetch - (prefetch >> 2);
             }
 
-            public void OnSubscribe(ISubscription s)
+            public void OnSubscribe(ISubscription subscription)
             {
-                if (SubscriptionHelper.Validate(ref this.s, s))
+                if (SubscriptionHelper.Validate(ref _subscription, subscription))
                 {
-                    var qs = s as IFlowSubscription<T>;
-                    if (qs != null)
+                    if (subscription is IFlowSubscription<T> flow)
                     {
-                        int m = qs.RequestFusion(FuseableHelper.ANY);
+                        var m = flow.RequestFusion(FusionMode.Any);
 
-                        if (m == FuseableHelper.SYNC)
+                        if (m == FusionMode.Sync)
                         {
-                            sourceMode = m;
-                            _flow = qs;
-                            Volatile.Write(ref done, true);
+                            _sourceMode = m;
+                            _flow = flow;
+                            Volatile.Write(ref _isDone, true);
                             SetupSubscribers();
                             Drain();
                             return;
                         }
-                        if (m == FuseableHelper.ASYNC)
+                        if (m == FusionMode.Async)
                         {
-                            sourceMode = m;
-                            _flow = qs;
+                            _sourceMode = m;
+                            _flow = flow;
                             SetupSubscribers();
-                            s.Request(prefetch < 0 ? long.MaxValue : prefetch);
+                            subscription.Request(_prefetch < 0 ? long.MaxValue : _prefetch);
                             return;
                         }
                     }
 
-                    _flow = QueueDrainHelper.CreateQueue<T>(prefetch);
+                    _flow = QueueDrainHelper.CreateQueue<T>(_prefetch);
 
                     SetupSubscribers();
 
-                    s.Request(prefetch < 0 ? long.MaxValue : prefetch);
+                    subscription.Request(_prefetch < 0 ? long.MaxValue : _prefetch);
                 }
             }
 
             void SetupSubscribers()
             {
-                var array = subscribers;
-                int n = array.Length;
+                var array = _subscribers;
 
-                for (int i = 0; i < n; i++)
+                for (var i = 0; i < array.Length; i++)
                 {
-                    if (Volatile.Read(ref cancelled))
+                    if (Volatile.Read(ref _isCancelled))
                     {
                         return;
                     }
-                    Volatile.Write(ref subscriberCount, i + 1);
+                    Volatile.Write(ref _subscriberCount, i + 1);
 
                     array[i].OnSubscribe(new RailSubscription(this, i));
                 }
@@ -144,9 +117,9 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             internal void Cancel()
             {
-                Volatile.Write(ref cancelled, true);
-                s.Cancel();
-                if (QueueDrainHelper.Enter(ref wip))
+                Volatile.Write(ref _isCancelled, true);
+                _subscription.Cancel();
+                if (QueueDrainHelper.Enter(ref _wip))
                 {
                     _flow.Clear();
                 }
@@ -156,23 +129,22 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             {
                 if (SubscriptionHelper.Validate(n))
                 {
-                    var rs = requests;
+                    var rs = _requests;
                     BackpressureHelper.GetAndAddCap(ref rs[index], n);
-                    if (Volatile.Read(ref subscriberCount) == rs.Length)
+                    if (Volatile.Read(ref _subscriberCount) == rs.Length)
                     {
                         Drain();
                     }
                 }
             }
 
-
-            public void OnNext(T t)
+            public void OnNext(T value)
             {
-                if (sourceMode == FuseableHelper.NONE)
+                if (_sourceMode == FusionMode.None)
                 {
-                    if (!_flow.Offer(t))
+                    if (!_flow.Offer(value))
                     {
-                        s.Cancel();
+                        _subscription.Cancel();
                         OnError(BackpressureHelper.MissingBackpressureException());
                         return;
                     }
@@ -182,25 +154,25 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             public void OnError(Exception e)
             {
-                error = e;
-                Volatile.Write(ref done, true);
+                _error = e;
+                Volatile.Write(ref _isDone, true);
                 Drain();
             }
 
             public void OnComplete()
             {
-                Volatile.Write(ref done, true);
+                Volatile.Write(ref _isDone, true);
                 Drain();
             }
 
             void Drain()
             {
-                if (!QueueDrainHelper.Enter(ref wip))
+                if (!QueueDrainHelper.Enter(ref _wip))
                 {
                     return;
                 }
 
-                if (sourceMode == FuseableHelper.SYNC)
+                if (_sourceMode == FusionMode.Sync)
                 {
                     DrainSync();
                 }
@@ -214,11 +186,11 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             {
                 int missed = 1;
                 var q = _flow;
-                var a = subscribers;
+                var a = _subscribers;
                 int n = a.Length;
-                var r = requests;
-                var e = emissions;
-                int i = index;
+                var r = _requests;
+                var e = _emissions;
+                int i = _index;
 
                 for (;;)
                 {
@@ -227,7 +199,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                     for (;;)
                     {
-                        if (Volatile.Read(ref cancelled))
+                        if (Volatile.Read(ref _isCancelled))
                         {
                             _flow.Clear();
                             return;
@@ -256,7 +228,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                             catch (Exception ex)
                             {
                                 ExceptionHelper.ThrowIfFatal(ex);
-                                s.Cancel();
+                                _subscription.Cancel();
                                 foreach (var s in a)
                                 {
                                     s.OnError(ex);
@@ -294,8 +266,8 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                         }
                     }
 
-                    index = i;
-                    missed = QueueDrainHelper.Leave(ref wip, missed);
+                    _index = i;
+                    missed = QueueDrainHelper.Leave(ref _wip, missed);
                     if (missed == 0)
                     {
                         break;
@@ -307,12 +279,12 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             {
                 int missed = 1;
                 var q = _flow;
-                var a = subscribers;
+                var a = _subscribers;
                 int n = a.Length;
-                var r = requests;
-                var e = emissions;
-                int i = index;
-                int c = produced;
+                var r = _requests;
+                var e = _emissions;
+                int i = _index;
+                int c = _produced;
 
                 for (;;)
                 {
@@ -320,16 +292,16 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                     for (;;)
                     {
-                        if (Volatile.Read(ref cancelled))
+                        if (Volatile.Read(ref _isCancelled))
                         {
                             _flow.Clear();
                             return;
                         }
 
-                        bool d = Volatile.Read(ref done);
+                        bool d = Volatile.Read(ref _isDone);
                         if (d)
                         {
-                            var ex = error;
+                            var ex = _error;
                             if (ex != null)
                             {
                                 q.Clear();
@@ -369,7 +341,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                             catch (Exception ex)
                             {
                                 ExceptionHelper.ThrowIfFatal(ex);
-                                s.Cancel();
+                                _subscription.Cancel();
                                 foreach (var s in a)
                                 {
                                     s.OnError(ex);
@@ -387,10 +359,10 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                             e[i] = ei + 1;
 
                             int ci = ++c;
-                            if (ci == limit)
+                            if (ci == _limit)
                             {
                                 c = 0;
-                                s.Request(ci);
+                                _subscription.Request(ci);
                             }
 
                             notReady = 0;
@@ -411,9 +383,9 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                         }
                     }
 
-                    index = i;
-                    produced = c;
-                    missed = QueueDrainHelper.Leave(ref wip, missed);
+                    _index = i;
+                    _produced = c;
+                    missed = QueueDrainHelper.Leave(ref _wip, missed);
                     if (missed == 0)
                     {
                         break;

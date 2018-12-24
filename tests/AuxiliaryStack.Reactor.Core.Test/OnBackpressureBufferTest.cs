@@ -16,8 +16,8 @@ namespace AuxiliaryStack.Reactor.Core.Test
         public void OnBackpressureBuffer_Fused()
         {
             Flux.Range(1, 10).OnBackpressureBuffer()
-                .Test(fusionMode: FuseableHelper.ANY)
-                .AssertFusionMode(FuseableHelper.ASYNC)
+                .Test(fusionMode: FusionMode.Any)
+                .AssertFusionMode(FusionMode.Async)
                 .AssertResult(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         }
         [Fact]
@@ -33,8 +33,8 @@ namespace AuxiliaryStack.Reactor.Core.Test
         {
             Flux.Range(1, 10).OnBackpressureBuffer()
                 .Filter(v => true)
-                .Test(fusionMode: FuseableHelper.ANY)
-                .AssertFusionMode(FuseableHelper.ASYNC)
+                .Test(fusionMode: FusionMode.Any)
+                .AssertFusionMode(FusionMode.Async)
                 .AssertResult(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         }
 

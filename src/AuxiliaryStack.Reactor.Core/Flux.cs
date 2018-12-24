@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 using AuxiliaryStack.Monads;
+using AuxiliaryStack.Reactor.Core.Flow;
 using AuxiliaryStack.Reactor.Core.Publisher;
 using AuxiliaryStack.Reactor.Core.Scheduler;
 using AuxiliaryStack.Reactor.Core.Subscriber;
@@ -4541,7 +4542,7 @@ namespace AuxiliaryStack.Reactor.Core
         /// <param name="fusionMode">The optional fusion mode if supported by the source.</param>
         /// <param name="cancelled">Optionally start out as cancelled.</param>
         /// <returns></returns>
-        public static TestSubscriber<T> Test<T>(this IFlux<T> source, long initialRequest = long.MaxValue, int fusionMode = 0, bool cancelled = false)
+        public static TestSubscriber<T> Test<T>(this IFlux<T> source, long initialRequest = long.MaxValue, FusionMode fusionMode = 0, bool cancelled = false)
         {
             TestSubscriber<T> ts = new TestSubscriber<T>(initialRequest, fusionMode);
             if (cancelled)

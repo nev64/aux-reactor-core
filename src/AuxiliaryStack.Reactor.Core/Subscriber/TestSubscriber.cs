@@ -32,9 +32,9 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
 
         bool subscriptionValidated;
 
-        int requestFusionMode;
+        FusionMode requestFusionMode;
 
-        int establishedFusionMode;
+        FusionMode establishedFusionMode;
 
         ISubscription s;
 
@@ -78,7 +78,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// </summary>
         /// <param name="initialRequest">The initial request amount.</param>
         /// <param name="fusionMode">The fusion mode to establish.</param>
-        public TestSubscriber(long initialRequest = long.MaxValue, int fusionMode = 0)
+        public TestSubscriber(long initialRequest = long.MaxValue, FusionMode fusionMode = FusionMode.None)
         {
             this.requested = initialRequest;
             this.requestFusionMode = fusionMode;
@@ -103,11 +103,11 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
                 this.qs = qs;
                 if (qs != null)
                 {
-                    if (requestFusionMode != FuseableHelper.NONE)
+                    if (requestFusionMode != FusionMode.None)
                     {
-                        int m = qs.RequestFusion(requestFusionMode);
+                        var m = qs.RequestFusion(requestFusionMode);
                         establishedFusionMode = m;
-                        if (m == FuseableHelper.SYNC)
+                        if (m == FusionMode.Sync)
                         {
                             try
                             {
@@ -149,7 +149,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// <inheritdoc/>
         public void OnNext(T t)
         {
-            if (establishedFusionMode == FuseableHelper.ASYNC)
+            if (establishedFusionMode == FusionMode.Async)
             {
                 try
                 {
@@ -228,7 +228,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// <inheritdoc/>
         public void Request(long n)
         {
-            if (establishedFusionMode != FuseableHelper.SYNC)
+            if (establishedFusionMode != FusionMode.Sync)
             {
                 BackpressureHelper.DeferredRequest(ref s, ref requested, n);
             }
@@ -544,11 +544,12 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// </summary>
         /// <param name="mode">The expected fusion mode, <see cref="FuseableHelper"/> constants.</param>
         /// <returns>This</returns>
-        public TestSubscriber<T> AssertFusionMode(int mode)
+        public TestSubscriber<T> AssertFusionMode(FusionMode mode)
         {
             if (establishedFusionMode != mode)
             {
-                AssertionError(string.Format("Wrong fusion mode. Expected = {0}, Actual = {1}", FuseableHelper.ToString(mode), FuseableHelper.ToString(establishedFusionMode)));
+                AssertionError(
+                    $"Wrong fusion mode. Expected = {mode}, Actual = {establishedFusionMode}");
             }
             return this;
         }

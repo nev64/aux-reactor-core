@@ -40,9 +40,9 @@ namespace AuxiliaryStack.Reactor.Core.Test
             Flux.Range(1, 1000000)
                 .PublishOn(DefaultScheduler.Instance)
                 .PublishOn(DefaultScheduler.Instance)
-                .Test(fusionMode: FuseableHelper.ANY)
+                .Test(fusionMode: FusionMode.Any)
                 .AwaitTerminalEvent()
-                .AssertFusionMode(FuseableHelper.ASYNC)
+                .AssertFusionMode(FusionMode.Async)
                 .AssertValueCount(1000000)
                 .AssertNoError()
                 .AssertComplete();
@@ -97,9 +97,9 @@ namespace AuxiliaryStack.Reactor.Core.Test
                 .PublishOn(DefaultScheduler.Instance)
                 .PublishOn(DefaultScheduler.Instance)
                 .Filter(v => true)
-                .Test(fusionMode: FuseableHelper.ANY)
+                .Test(fusionMode: FusionMode.Any)
                 .AwaitTerminalEvent()
-                .AssertFusionMode(FuseableHelper.ASYNC)
+                .AssertFusionMode(FusionMode.Async)
                 .AssertValueCount(1000000)
                 .AssertNoError()
                 .AssertComplete();

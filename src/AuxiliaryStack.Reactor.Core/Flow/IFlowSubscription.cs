@@ -13,6 +13,6 @@ namespace AuxiliaryStack.Reactor.Core.Flow
         /// </summary>
         /// <param name="mode">The wanted fusion mode. See the <see cref="FuseableHelper"/> constants.</param>
         /// <returns>The established fusion mode. See the <see cref="FuseableHelper"/> constants.</returns>
-        int RequestFusion(int mode);
+        FusionMode RequestFusion(FusionMode mode);
     }
 }

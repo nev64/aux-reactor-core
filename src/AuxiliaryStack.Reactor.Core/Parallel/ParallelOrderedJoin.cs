@@ -63,9 +63,10 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                 {
                     a[i] = new InnerSubscriber(this, prefetch);
                 }
+
                 this.subscribers = a;
                 this.peek = new IOrderedItem<T>[n];
-            } 
+            }
 
             public void Cancel()
             {
@@ -167,7 +168,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                         {
                             var inner = a[i];
 
-                            bool d = Volatile.Read(ref inner.done);
+                            bool d = Volatile.Read(ref inner._isDone);
 
                             var q = Volatile.Read(ref inner._flow);
                             if (q != null)
@@ -192,6 +193,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                                         b.OnError(ex);
                                         return;
                                     }
+
                                     if (hasValue)
                                     {
                                         vs[i] = vsi.GetValue();
@@ -200,7 +202,8 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                                             min = vsi.GetValue();
                                             minIndex = i;
                                         }
-                                    } else
+                                    }
+                                    else
                                     {
                                         if (d)
                                         {
@@ -219,14 +222,14 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                                     {
                                         finished++;
                                     }
-                                    else
-                                    if (min == null || min.CompareTo(vsi.GetValue()) > 0)
+                                    else if (min == null || min.CompareTo(vsi.GetValue()) > 0)
                                     {
                                         min = vsi.GetValue();
                                         minIndex = i;
                                     }
                                 }
-                            } else
+                            }
+                            else
                             {
                                 fullRow = false;
                             }
@@ -264,65 +267,58 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
         sealed class InnerSubscriber : ISubscriber<IOrderedItem<T>>
         {
-            readonly OrderedJoin parent;
-
-            readonly int prefetch;
-
-            readonly int limit;
-
-            ISubscription s;
+            private readonly OrderedJoin _parent;
+            private readonly int _prefetch;
+            private readonly int _limit;
+            private ISubscription _subscription;
+            private FusionMode _fusionMode;
+            private int _produced;
 
             internal IFlow<IOrderedItem<T>> _flow;
-
-            internal bool done;
-
-            int fusionMode;
-
-            int produced;
+            internal bool _isDone;
 
             internal InnerSubscriber(OrderedJoin parent, int prefetch)
             {
-                this.parent = parent;
-                this.prefetch = prefetch;
-                this.limit = prefetch - (prefetch >> 2);
+                _parent = parent;
+                _prefetch = prefetch;
+                _limit = prefetch - (prefetch >> 2);
             }
 
-            public void OnSubscribe(ISubscription s)
+            public void OnSubscribe(ISubscription subscription)
             {
-                if (SubscriptionHelper.SetOnce(ref this.s, s))
+                if (SubscriptionHelper.SetOnce(ref _subscription, subscription))
                 {
-                    var qs = s as IFlowSubscription<IOrderedItem<T>>;
-                    if (qs != null)
+                    if (subscription is IFlowSubscription<IOrderedItem<T>> flow)
                     {
-                        int m = qs.RequestFusion(FuseableHelper.ANY);
-                        if (m == FuseableHelper.SYNC)
+                        var mode = flow.RequestFusion(FusionMode.Any);
+                        if (mode == FusionMode.Sync)
                         {
-                            fusionMode = m;
-                            Volatile.Write(ref _flow, qs);
-                            Volatile.Write(ref done, true);
+                            _fusionMode = mode;
+                            Volatile.Write(ref _flow, flow);
+                            Volatile.Write(ref _isDone, true);
 
-                            parent.Drain();
+                            _parent.Drain();
                             return;
                         }
 
-                        if (m == FuseableHelper.ASYNC)
+                        if (mode == FusionMode.Async)
                         {
-                            fusionMode = m;
-                            Volatile.Write(ref _flow, qs);
-                            s.Request(prefetch < 0 ? long.MaxValue : prefetch);
+                            _fusionMode = mode;
+                            Volatile.Write(ref _flow, flow);
+                            subscription.Request(_prefetch < 0 ? long.MaxValue : _prefetch);
                             return;
                         }
                     }
 
-                    Volatile.Write(ref _flow, QueueDrainHelper.CreateQueue<IOrderedItem<T>>(prefetch));
+                    Volatile.Write(ref _flow, QueueDrainHelper.CreateQueue<IOrderedItem<T>>(_prefetch));
 
-                    s.Request(prefetch < 0 ? long.MaxValue : prefetch);
+                    subscription.Request(_prefetch < 0 ? long.MaxValue : _prefetch);
                 }
             }
 
             public void OnNext(IOrderedItem<T> t)
             {
-                if (fusionMode == FuseableHelper.NONE)
+                if (_fusionMode == FusionMode.None)
                 {
                     if (!_flow.Offer(t))
                     {
@@ -330,43 +326,41 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                         return;
                     }
                 }
-                parent.Drain();
+
+                _parent.Drain();
             }
 
             public void OnError(Exception e)
             {
-                parent.InnerError(e);
+                _parent.InnerError(e);
             }
 
             public void OnComplete()
             {
-                Volatile.Write(ref done, true);
-                parent.Drain();
+                Volatile.Write(ref _isDone, true);
+                _parent.Drain();
             }
 
             internal void Cancel()
             {
-                SubscriptionHelper.Cancel(ref s);
+                SubscriptionHelper.Cancel(ref _subscription);
             }
 
-            internal void Clear()
-            {
-                _flow?.Clear();
-            }
+            internal void Clear() => _flow?.Clear();
 
             internal void RequestOne()
             {
-                if (fusionMode != FuseableHelper.SYNC)
+                if (_fusionMode != FusionMode.Sync)
                 {
-                    int p = produced + 1;
-                    if (p == limit)
+                    var produced = _produced + 1;
+                    if (produced == _limit)
                     {
-                        produced = 0;
-                        s.Request(p);
+                        _produced = 0;
+                        _subscription.Request(produced);
                     }
                     else
                     {
-                        produced = p;
+                        _produced = produced;
                     }
                 }
             }

@@ -39,7 +39,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             int once;
 
-            int fusionMode;
+            FusionMode fusionMode;
 
             public ErrorSubscription(ISubscriber<T> actual, Exception error)
             {
@@ -78,7 +78,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     if (Interlocked.CompareExchange(ref once, 1, 0) == 0)
                     {
-                        if (fusionMode == FuseableHelper.ASYNC)
+                        if (fusionMode == FusionMode.Async)
                         {
                             actual.OnNext(default);
                         }
@@ -90,7 +90,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
                 fusionMode = mode;
                 return mode;

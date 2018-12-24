@@ -520,9 +520,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 Drain();
             }
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
-                int m = mode & FuseableHelper.ASYNC;
+                var m = mode & FusionMode.Async;
                 outputFused = m != 0;
                 return m;
             }
@@ -786,9 +786,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 Drain();
             }
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
-                int m = mode & FuseableHelper.ASYNC;
+                var m = mode & FusionMode.Async;
                 outputFused = m != 0;
                 return m;
             }
@@ -882,9 +882,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 Drain();
             }
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
-                int m = mode & FuseableHelper.ASYNC;
+                var m = mode & FusionMode.Async;
                 outputFused = m != 0;
                 return m;
             }
@@ -1155,9 +1155,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 Drain();
             }
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
-                int m = mode & FuseableHelper.ASYNC;
+                var m = mode & FusionMode.Async;
                 outputFused = m != 0;
                 return m;
             }

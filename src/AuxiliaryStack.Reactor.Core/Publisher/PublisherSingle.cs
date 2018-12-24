@@ -49,7 +49,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected override void OnStart()
             {
-                s.Request(long.MaxValue);
+                _subscription.Request(long.MaxValue);
             }
 
             public override void OnComplete()
@@ -62,7 +62,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 if (hasValue)
                 {
-                    Complete(value);
+                    Complete(_value);
                 }
                 else
                 {
@@ -92,7 +92,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     return;
                 }
                 done = true;
-                value = default(T);
+                _value = default(T);
                 Error(e);
             }
 
@@ -105,12 +105,12 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 if (!hasValue)
                 {
                     hasValue = true;
-                    value = t;
+                    _value = t;
                 }
                 else
                 {
                     done = true;
-                    s.Cancel();
+                    _subscription.Cancel();
                     Error(new IndexOutOfRangeException("The source has more than one value."));
                 }
             }

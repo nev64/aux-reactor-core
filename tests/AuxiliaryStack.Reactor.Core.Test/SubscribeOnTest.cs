@@ -34,9 +34,9 @@ namespace AuxiliaryStack.Reactor.Core.Test
         public void SubscribeOn_ScalarFused()
         {
             Flux.Just(1).SubscribeOn(DefaultScheduler.Instance)
-                .Test(fusionMode: FuseableHelper.ANY)
+                .Test(fusionMode: FusionMode.Any)
                 .AwaitTerminalEvent()
-                .AssertFusionMode(FuseableHelper.ASYNC)
+                .AssertFusionMode(FusionMode.Async)
                 .AssertResult(1);
         }
     }

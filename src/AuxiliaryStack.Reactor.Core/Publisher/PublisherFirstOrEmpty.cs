@@ -55,13 +55,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     return;
                 }
                 done = true;
-                s.Cancel();
+                _subscription.Cancel();
                 Complete(t);
             }
 
             protected override void OnStart()
             {
-                s.Request(long.MaxValue);
+                _subscription.Request(long.MaxValue);
             }
         }
     }

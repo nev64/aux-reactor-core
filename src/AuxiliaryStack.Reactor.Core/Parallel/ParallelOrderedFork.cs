@@ -58,7 +58,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             int produced;
 
-            int sourceMode;
+            private FusionMode _sourceMode;
 
             int index;
 
@@ -82,30 +82,29 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                 this.limit = prefetch - (prefetch >> 2);
             }
 
-            public void OnSubscribe(ISubscription s)
+            public void OnSubscribe(ISubscription subscription)
             {
-                if (SubscriptionHelper.Validate(ref this.s, s))
+                if (SubscriptionHelper.Validate(ref this.s, subscription))
                 {
-                    var qs = s as IFlowSubscription<T>;
-                    if (qs != null)
+                    if (subscription is IFlowSubscription<T> flow)
                     {
-                        int m = qs.RequestFusion(FuseableHelper.ANY);
+                        var mode = flow.RequestFusion(FusionMode.Any);
 
-                        if (m == FuseableHelper.SYNC)
+                        if (mode == FusionMode.Sync)
                         {
-                            sourceMode = m;
-                            _flow = qs;
+                            _sourceMode = mode;
+                            _flow = flow;
                             Volatile.Write(ref done, true);
                             SetupSubscribers();
                             Drain();
                             return;
                         }
-                        if (m == FuseableHelper.ASYNC)
+                        if (mode == FusionMode.Sync)
                         {
-                            sourceMode = m;
-                            _flow = qs;
+                            _sourceMode = mode;
+                            _flow = flow;
                             SetupSubscribers();
-                            s.Request(prefetch < 0 ? long.MaxValue : prefetch);
+                            subscription.Request(prefetch < 0 ? long.MaxValue : prefetch);
                             return;
                         }
                     }
@@ -114,7 +113,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                     SetupSubscribers();
 
-                    s.Request(prefetch < 0 ? long.MaxValue : prefetch);
+                    subscription.Request(prefetch < 0 ? long.MaxValue : prefetch);
                 }
             }
 
@@ -161,7 +160,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             public void OnNext(T t)
             {
-                if (sourceMode == FuseableHelper.NONE)
+                if (_sourceMode == FusionMode.None)
                 {
                     if (!_flow.Offer(t))
                     {
@@ -193,7 +192,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                     return;
                 }
 
-                if (sourceMode == FuseableHelper.SYNC)
+                if (_sourceMode == FusionMode.Sync)
                 {
                     DrainSync();
                 }

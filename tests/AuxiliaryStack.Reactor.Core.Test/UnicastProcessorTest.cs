@@ -84,7 +84,7 @@ namespace AuxiliaryStack.Reactor.Core.Test
                     up.OnComplete();
                 });
 
-                var ts = up.Test(fusionMode: FuseableHelper.ANY);
+                var ts = up.Test(fusionMode: FusionMode.Any);
 
                 ts
                 .AwaitTerminalEvent(TimeSpan.FromSeconds(5))
@@ -99,7 +99,7 @@ namespace AuxiliaryStack.Reactor.Core.Test
             {
                 var up = new UnicastProcessor<int>();
 
-                var ts = new TestSubscriber<int>(fusionMode: FuseableHelper.ANY);
+                var ts = new TestSubscriber<int>(fusionMode: FusionMode.Any);
 
                 int[] wait = { 2 };
 
@@ -132,7 +132,7 @@ namespace AuxiliaryStack.Reactor.Core.Test
             {
                 var up = new UnicastProcessor<int>();
 
-                var ts = new TestSubscriber<int>(fusionMode: FuseableHelper.ANY);
+                var ts = new TestSubscriber<int>(fusionMode: FusionMode.Any);
 
                 int[] wait = { 2 };
 
@@ -166,7 +166,7 @@ namespace AuxiliaryStack.Reactor.Core.Test
             {
                 var up = new UnicastProcessor<int>();
 
-                var ts = new TestSubscriber<int>(fusionMode: FuseableHelper.ANY);
+                var ts = new TestSubscriber<int>(fusionMode: FusionMode.Any);
 
                 int[] wait = { 2 };
 
@@ -200,7 +200,7 @@ namespace AuxiliaryStack.Reactor.Core.Test
             {
                 var up = new UnicastProcessor<int>();
 
-                var ts = new TestSubscriber<int>(fusionMode: FuseableHelper.ANY);
+                var ts = new TestSubscriber<int>(fusionMode: FusionMode.Any);
 
                 int[] wait = { 2 };
 
@@ -234,7 +234,7 @@ namespace AuxiliaryStack.Reactor.Core.Test
             {
                 var up = new UnicastProcessor<int>();
 
-                var ts = new TestSubscriber<int>(fusionMode: FuseableHelper.ANY);
+                var ts = new TestSubscriber<int>(fusionMode: FusionMode.Any);
 
                 int[] wait = { 2 };
 

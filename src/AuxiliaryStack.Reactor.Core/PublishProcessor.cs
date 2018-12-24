@@ -25,7 +25,7 @@ namespace AuxiliaryStack.Reactor.Core
 
         IFlow<T> _flow;
 
-        int sourceMode;
+        FusionMode sourceMode;
 
         bool done;
         Exception error;
@@ -109,8 +109,8 @@ namespace AuxiliaryStack.Reactor.Core
                 var qs = s as IFlowSubscription<T>;
                 if (qs != null)
                 {
-                    int m = qs.RequestFusion(FuseableHelper.ANY);
-                    if (m == FuseableHelper.SYNC)
+                    var m = qs.RequestFusion(FusionMode.Any);
+                    if (m == FusionMode.Sync)
                     {
                         sourceMode = m;
                         _flow = qs;
@@ -118,7 +118,7 @@ namespace AuxiliaryStack.Reactor.Core
                         Drain();
                         return;
                     }
-                    if (m == FuseableHelper.ASYNC)
+                    if (m == FusionMode.Async)
                     {
                         sourceMode = m;
                         _flow = qs;
@@ -167,7 +167,7 @@ namespace AuxiliaryStack.Reactor.Core
                 return;
             }
 
-            if (sourceMode == FuseableHelper.NONE)
+            if (sourceMode == FusionMode.None)
             {
                 if (!_flow.Offer(t))
                 {
@@ -311,7 +311,7 @@ namespace AuxiliaryStack.Reactor.Core
                             a.Produced(e);
                         }
 
-                        if (sourceMode != FuseableHelper.SYNC)
+                        if (sourceMode != FusionMode.Sync)
                         {
                             s.Request(e);
                         }

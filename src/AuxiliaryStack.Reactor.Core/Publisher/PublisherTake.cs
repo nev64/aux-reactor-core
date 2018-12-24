@@ -63,7 +63,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     return;
                 }
-                if (fusionMode == FuseableHelper.ASYNC)
+                if (fusionMode == FusionMode.Async)
                 {
                     actual.OnNext(t);
                     return;
@@ -85,7 +85,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 remaining = r;
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 return TransitiveAnyFusion(mode);
             }
@@ -111,7 +111,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 long r = remaining;
                 if (r == 0)
                 {
-                    if (fusionMode == FuseableHelper.ASYNC && !done)
+                    if (fusionMode == FusionMode.Async && !done)
                     {
                         done = true;
                         qs.Cancel();
@@ -126,7 +126,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     remaining = --r;
                     if (r == 0)
                     {
-                        if (fusionMode == FuseableHelper.ASYNC && !done)
+                        if (fusionMode == FusionMode.Async && !done)
                         {
                             done = true;
                             qs.Cancel();
@@ -168,7 +168,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     return;
                 }
-                if (fusionMode == FuseableHelper.ASYNC)
+                if (fusionMode == FusionMode.Async)
                 {
                     actual.OnNext(t);
                     return;
@@ -196,7 +196,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     return true;
                 }
-                if (fusionMode == FuseableHelper.ASYNC)
+                if (fusionMode == FusionMode.Async)
                 {
                     return actual.TryOnNext(t);
                 }
@@ -217,7 +217,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return b;
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 return TransitiveAnyFusion(mode);
             }
@@ -243,7 +243,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 long r = remaining;
                 if (r == 0)
                 {
-                    if (fusionMode == FuseableHelper.ASYNC && !done)
+                    if (fusionMode == FusionMode.Async && !done)
                     {
                         done = true;
                         qs.Cancel();
@@ -259,7 +259,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     remaining = --r;
                     if (r == 0)
                     {
-                        if (fusionMode == FuseableHelper.ASYNC && !done)
+                        if (fusionMode == FusionMode.Async && !done)
                         {
                             done = true;
                             qs.Cancel();

@@ -79,7 +79,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 long j = i;
                 if (j == index)
                 {
-                    s.Cancel();
+                    _subscription.Cancel();
                     done = true;
                     Complete(t);
                 }

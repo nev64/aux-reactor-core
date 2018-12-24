@@ -11,40 +11,39 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 {
     sealed class PublisherSubscribeOn<T> : IFlux<T>, IMono<T>
     {
-        readonly IPublisher<T> source;
-
-        readonly IScheduler scheduler;
+        private readonly IPublisher<T> _source;
+        private readonly IScheduler _scheduler;
 
         internal PublisherSubscribeOn(IPublisher<T> source, IScheduler scheduler)
         {
-            this.source = source;
-            this.scheduler = scheduler;
+            _source = source;
+            _scheduler = scheduler;
         }
 
-        public void Subscribe(ISubscriber<T> s)
+        public void Subscribe(ISubscriber<T> subscriber)
         {
-            if (TrySingleSchedule(source, s, scheduler))
+            if (TrySingleSchedule(_source, subscriber, _scheduler))
             {
                 return;
             }
 
-            var worker = scheduler.CreateWorker();
+            var worker = _scheduler.CreateWorker();
 
-            if (s is IConditionalSubscriber<T>)
+            if (subscriber is IConditionalSubscriber<T> conditionalSubscriber)
             {
-                var parent = new SubscribeOnConditionalSubscriber((IConditionalSubscriber<T>)s, worker);
+                var parent = new SubscribeOnConditionalSubscription(conditionalSubscriber, worker);
 
-                s.OnSubscribe(parent);
+                subscriber.OnSubscribe(parent);
 
-                worker.Schedule(() => source.Subscribe(parent));
+                worker.Schedule(() => _source.Subscribe(parent));
             }
             else
             {
-                var parent = new SubscribeOnSubscriber(s, worker);
+                var parent = new SubscribeOnSubscription(subscriber, worker);
 
-                s.OnSubscribe(parent);
+                subscriber.OnSubscribe(parent);
 
-                worker.Schedule(() => source.Subscribe(parent));
+                worker.Schedule(() => _source.Subscribe(parent));
             }
         }
 
@@ -54,20 +53,20 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
         /// and reads the Callable.Value on that thread.
         /// </summary>
         /// <param name="source">The source IPublisher to check</param>
-        /// <param name="s">The target subscriber.</param>
+        /// <param name="subscriber">The target subscriber.</param>
         /// <param name="scheduler">The Scheduler to use.</param>
         /// <returns></returns>
-        public static bool TrySingleSchedule(IPublisher<T> source, ISubscriber<T> s, IScheduler scheduler)
+        public static bool TrySingleSchedule(IPublisher<T> source, ISubscriber<T> subscriber, IScheduler scheduler)
         {
-            if (source is ICallable<T>)
+            if (source is ICallable<T> callable)
             {
-                s.OnSubscribe(new CallableSubscribeOn(s, (ICallable<T>)source, scheduler));
+                subscriber.OnSubscribe(new CallableSubscribeOn(subscriber, callable, scheduler));
                 return true;
             }
             return false;
         }
 
-        sealed class SubscribeOnSubscriber : ISubscriber<T>, ISubscription
+        sealed class SubscribeOnSubscription : ISubscriber<T>, ISubscription
         {
             readonly ISubscriber<T> actual;
 
@@ -77,7 +76,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             long requested;
 
-            internal SubscribeOnSubscriber(ISubscriber<T> actual, IWorker worker)
+            internal SubscribeOnSubscription(ISubscriber<T> actual, IWorker worker)
             {
                 this.actual = actual;
                 this.worker = worker;
@@ -133,7 +132,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             }
         }
 
-        sealed class SubscribeOnConditionalSubscriber : IConditionalSubscriber<T>, ISubscription
+        sealed class SubscribeOnConditionalSubscription : IConditionalSubscriber<T>, ISubscription
         {
             readonly IConditionalSubscriber<T> actual;
 
@@ -143,7 +142,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             long requested;
 
-            internal SubscribeOnConditionalSubscriber(IConditionalSubscriber<T> actual, IWorker worker)
+            internal SubscribeOnConditionalSubscription(IConditionalSubscriber<T> actual, IWorker worker)
             {
                 this.actual = actual;
                 this.worker = worker;
@@ -216,7 +215,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             int once;
 
-            int fusionMode;
+            FusionMode fusionMode;
 
             bool hasValue;
 
@@ -241,7 +240,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             void Run()
             {
-                if (fusionMode != FuseableHelper.NONE)
+                if (fusionMode != FusionMode.None)
                 {
                     hasValue = true;
                     actual.OnNext(default(T));
@@ -285,13 +284,13 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 DisposableHelper.Dispose(ref cancel);
             }
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
-                if ((mode & FuseableHelper.BOUNDARY) != 0)
+                if ((mode & FusionMode.Boundary) != 0)
                 {
-                    return FuseableHelper.NONE;
+                    return FusionMode.None;
                 }
-                int m = mode & FuseableHelper.ASYNC;
+                var m = mode & FusionMode.Async;
                 fusionMode = m;
                 return m;
             }

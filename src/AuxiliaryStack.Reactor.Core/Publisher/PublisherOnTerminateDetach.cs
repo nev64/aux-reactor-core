@@ -45,14 +45,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected abstract void subscribeActual();
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
                 var qs = this.qs;
                 if (qs != null)
                 {
                     return qs.RequestFusion(mode);
                 }
-                return FuseableHelper.NONE;
+                return FusionMode.None;
             }
 
             public bool Offer(T value)

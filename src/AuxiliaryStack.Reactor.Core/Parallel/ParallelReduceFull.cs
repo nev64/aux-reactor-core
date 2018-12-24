@@ -7,60 +7,54 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 {
     sealed class ParallelReduceFull<T> : IFlux<T>, IMono<T>
     {
-        readonly IParallelFlux<T> source;
-
-        readonly Func<T, T, T> reducer;
+        private readonly IParallelFlux<T> _source;
+        private readonly Func<T, T, T> _reducer;
 
         internal ParallelReduceFull(IParallelFlux<T> source, Func<T, T, T> reducer)
         {
-            this.source = source;
-            this.reducer = reducer;
+            _source = source;
+            _reducer = reducer;
         }
 
-        public void Subscribe(ISubscriber<T> s)
+        public void Subscribe(ISubscriber<T> subscriber)
         {
-            int n = source.Parallelism;
+            var parent = new ReduceFullCoordinator(subscriber, _source.Parallelism, _reducer);
+            subscriber.OnSubscribe(parent);
 
-            var parent = new ReduceFullCoordinator(s, n, reducer);
-            s.OnSubscribe(parent);
-
-            source.Subscribe(parent.subscribers);
+            _source.Subscribe(parent._subscribers);
         }
 
         sealed class ReduceFullCoordinator : DeferredScalarSubscription<T>
         {
-            internal readonly InnerSubscriber[] subscribers;
+            internal readonly InnerSubscriber[] _subscribers;
+            private readonly Func<T, T, T> _reducer;
+            private Exception _error;
+            private int _remaining;
+            private SlotPair _current;
 
-            readonly Func<T, T, T> reducer;
-
-            Exception error;
-
-            int remaining;
-
-            SlotPair current;
-
-            public ReduceFullCoordinator(ISubscriber<T> actual, int n, Func<T, T, T> reducer) : base(actual)
+            public ReduceFullCoordinator(ISubscriber<T> actual, int n, Func<T, T, T> reducer) 
+                : base(actual)
             {
                 var a = new InnerSubscriber[n];
-                for (int i = 0; i < n; i++)
+                for (var i = 0; i < n; i++)
                 {
                     a[i] = new InnerSubscriber(this, reducer);
                 }
-                this.subscribers = a;
-                this.reducer = reducer;
-                Volatile.Write(ref remaining, n);
+                _subscribers = a;
+                _reducer = reducer;
+                Volatile.Write(ref _remaining, n);
             }
 
             SlotPair AddValue(T value)
             {
                 for (;;)
                 {
-                    var c = Volatile.Read(ref current);
+                    var c = Volatile.Read(ref _current);
 
                     if (c == null)
                     {
                         c = new SlotPair();
-                        if (Interlocked.CompareExchange(ref current, c, null) != null)
+                        if (Interlocked.CompareExchange(ref _current, c, null) != null)
                         {
                             continue;
                         }
@@ -69,7 +63,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                     int slot = c.TryAcquireSlot();
                     if (slot < 0)
                     {
-                        Interlocked.CompareExchange(ref current, null, c);
+                        Interlocked.CompareExchange(ref _current, null, c);
                         continue;
                     }
                     if (slot == 0)
@@ -83,7 +77,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                     if (c.ReleaseSlot())
                     {
-                        Interlocked.CompareExchange(ref current, null, c);
+                        Interlocked.CompareExchange(ref _current, null, c);
                         return c;
                     }
                     return null;
@@ -93,7 +87,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
             public override void Cancel()
             {
                 base.Cancel();
-                foreach (var inner in subscribers)
+                foreach (var inner in _subscribers)
                 {
                     inner.Cancel();
                 }
@@ -114,7 +108,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                         try
                         {
-                            value = reducer(sp.first, sp.second);
+                            value = _reducer(sp.first, sp.second);
                         }
                         catch (Exception ex)
                         {
@@ -125,10 +119,10 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                     }
                 }
 
-                if (Interlocked.Decrement(ref remaining) == 0)
+                if (Interlocked.Decrement(ref _remaining) == 0)
                 {
-                    var sp = Volatile.Read(ref current);
-                    current = null;
+                    var sp = Volatile.Read(ref _current);
+                    _current = null;
                     if (sp != null)
                     {
                         Complete(sp.first);
@@ -142,10 +136,10 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
             internal void InnerError(Exception ex)
             {
-                if (ExceptionHelper.AddError(ref error, ex))
+                if (ExceptionHelper.AddError(ref _error, ex))
                 {
                     Cancel();
-                    ex = ExceptionHelper.Terminate(ref error);
+                    ex = ExceptionHelper.Terminate(ref _error);
                     _actual.OnError(ex);
                 }
                 else

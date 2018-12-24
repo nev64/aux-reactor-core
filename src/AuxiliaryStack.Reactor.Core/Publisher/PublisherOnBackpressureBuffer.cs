@@ -92,14 +92,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 Drain();
             }
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
-                if ((mode & FuseableHelper.ASYNC) != 0)
+                if ((mode & FusionMode.Async) != 0)
                 {
                     outputFused = true;
-                    return FuseableHelper.ASYNC;
+                    return FusionMode.Async;
                 }
-                return FuseableHelper.NONE;
+                return FusionMode.None;
             }
 
             public bool Offer(T value)

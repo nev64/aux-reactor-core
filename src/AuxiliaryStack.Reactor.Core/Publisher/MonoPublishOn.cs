@@ -5,6 +5,7 @@ using static AuxiliaryStack.Monads.Option;
 
 namespace AuxiliaryStack.Reactor.Core.Publisher
 {
+    //todo: review
     internal sealed class MonoPublishOn<T> : IMono<T>
     {
         private readonly IMono<T> _source;
@@ -67,7 +68,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public void Request(long n) => _subscription.Request(n);
 
-            public int RequestFusion(int mode) => mode & FuseableHelper.ASYNC;
+            public FusionMode RequestFusion(FusionMode mode) => mode & FusionMode.Async;
 
             public bool Offer(T value) => FuseableHelper.DontCallOffer();
 

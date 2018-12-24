@@ -324,7 +324,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                 readonly int limit;
 
-                ISubscription s;
+                ISubscription subscription;
 
                 bool done;
 
@@ -332,7 +332,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                 long produced;
 
-                int fusionMode;
+                FusionMode _fusionMode;
 
                 internal JoinInnerSubscriber(JoinSubscription parent, int prefetch)
                 {
@@ -343,7 +343,7 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                 public void Cancel()
                 {
-                    SubscriptionHelper.Cancel(ref s);
+                    SubscriptionHelper.Cancel(ref subscription);
                 }
 
                 public void OnComplete()
@@ -357,11 +357,11 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                     parent.InnerError(e);
                 }
 
-                public void OnNext(T t)
+                public void OnNext(T value)
                 {
-                    if (fusionMode == FuseableHelper.NONE)
+                    if (_fusionMode == FusionMode.None)
                     {
-                        parent.InnerNext(this, t);
+                        parent.InnerNext(this, value);
                     }
                     else
                     {
@@ -369,30 +369,29 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
                     }
                 }
 
-                public void OnSubscribe(ISubscription s)
+                public void OnSubscribe(ISubscription subscription)
                 {
-                    if (SubscriptionHelper.SetOnce(ref this.s, s))
+                    if (SubscriptionHelper.SetOnce(ref this.subscription, subscription))
                     {
-                        var qs = s as IFlowSubscription<T>;
-                        if (qs != null)
+                        if (subscription is IFlowSubscription<T> qs)
                         {
-                            int m = qs.RequestFusion(FuseableHelper.ANY);
-                            if (m == FuseableHelper.SYNC)
+                            var mode = qs.RequestFusion(FusionMode.Any);
+                            if (mode == FusionMode.Sync)
                             {
-                                fusionMode = m;
+                                _fusionMode = mode;
                                 Volatile.Write(ref _flow, qs);
                                 Volatile.Write(ref done, true);
                                 parent.InnerComplete();
                                 return;
                             }
-                            if (m == FuseableHelper.ASYNC)
+                            if (mode == FusionMode.Async)
                             {
-                                fusionMode = m;
+                                _fusionMode = mode;
                                 Volatile.Write(ref _flow, qs);
                             }
                         }
 
-                        s.Request(prefetch < 0 ? long.MaxValue : prefetch);
+                        subscription.Request(prefetch < 0 ? long.MaxValue : prefetch);
                     }
                 }
 
@@ -409,13 +408,13 @@ namespace AuxiliaryStack.Reactor.Core.Parallel
 
                 public void RequestOne()
                 {
-                    if (fusionMode != FuseableHelper.SYNC)
+                    if (_fusionMode != FusionMode.Sync)
                     {
                         long p = produced + 1;
                         if (p == limit)
                         {
                             produced = 0;
-                            s.Request(p);
+                            subscription.Request(p);
                         }
                         else
                         {

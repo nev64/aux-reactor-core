@@ -59,7 +59,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 actual.OnNext(t);
 
-                if (fusionMode != FuseableHelper.NONE)
+                if (fusionMode != FusionMode.None)
                 {
                     return;
                 }
@@ -87,7 +87,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (done)
                 {
-                    if (fusionMode == FuseableHelper.ASYNC)
+                    if (fusionMode == FusionMode.Async)
                     {
                         actual.OnComplete();
                     }
@@ -106,7 +106,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return result;
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 return TransitiveBoundaryFusion(mode);
             }
@@ -141,7 +141,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 actual.OnNext(t);
 
-                if (fusionMode != FuseableHelper.NONE)
+                if (fusionMode != FusionMode.None)
                 {
                     return;
                 }
@@ -174,7 +174,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
                 bool c = actual.TryOnNext(t);
 
-                if (fusionMode != FuseableHelper.NONE)
+                if (fusionMode != FusionMode.None)
                 {
                     return c;
                 }
@@ -205,7 +205,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 if (done)
                 {
-                    if (fusionMode == FuseableHelper.ASYNC)
+                    if (fusionMode == FusionMode.Async)
                     {
                         actual.OnComplete();
                     }
@@ -225,7 +225,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return result;
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 return TransitiveBoundaryFusion(mode);
             }

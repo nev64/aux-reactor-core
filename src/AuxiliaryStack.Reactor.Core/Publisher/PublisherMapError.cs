@@ -89,7 +89,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 return TransitiveAnyFusion(mode);
             }
@@ -159,7 +159,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 return TransitiveAnyFusion(mode);
             }

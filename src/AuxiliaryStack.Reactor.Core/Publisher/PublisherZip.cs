@@ -673,7 +673,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             IFlow<T> _flow;
 
-            int fusionMode;
+            FusionMode fusionMode;
 
             bool done;
 
@@ -690,7 +690,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             internal void RequestOne()
             {
-                if (fusionMode != FuseableHelper.SYNC)
+                if (fusionMode != FusionMode.Sync)
                 {
                     int p = consumed + 1;
                     if (p == limit)
@@ -717,8 +717,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     var qs = s as IFlowSubscription<T>;
                     if (qs != null)
                     {
-                        int m = qs.RequestFusion(FuseableHelper.ANY);
-                        if (m == FuseableHelper.SYNC)
+                        var m = qs.RequestFusion(FusionMode.Any);
+                        if (m == FusionMode.Sync)
                         {
                             fusionMode = m;
                             nonEmpty = !qs.IsEmpty();
@@ -729,7 +729,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
                         else
-                        if (m == FuseableHelper.ASYNC)
+                        if (m == FusionMode.Async)
                         {
                             fusionMode = m;
                             Volatile.Write(ref _flow, qs);
@@ -752,7 +752,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     nonEmpty = true;
                 }
-                if (fusionMode != FuseableHelper.ASYNC)
+                if (fusionMode != FusionMode.Async)
                 {
                     _flow.Offer(t);
                 }

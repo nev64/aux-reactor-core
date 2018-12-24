@@ -68,7 +68,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     return false;
                 }
 
-                if (fusionMode != FuseableHelper.NONE)
+                if (fusionMode != FusionMode.None)
                 {
                     actual.OnNext(t);
                     return true;
@@ -121,7 +121,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
                         else
                         {
-                            if (fusionMode != FuseableHelper.SYNC)
+                            if (fusionMode != FusionMode.Sync)
                             {
                                 s.Request(1);
                             }
@@ -133,7 +133,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 return TransitiveBoundaryFusion(mode);
             }
@@ -174,7 +174,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 {
                     return false;
                 }
-                if (fusionMode != FuseableHelper.NONE)
+                if (fusionMode != FusionMode.None)
                 {
                     return actual.TryOnNext(t);
                 }
@@ -225,7 +225,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         }
                         else
                         {
-                            if (fusionMode != FuseableHelper.SYNC)
+                            if (fusionMode != FusionMode.Sync)
                             {
                                 s.Request(1);
                             }
@@ -238,7 +238,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 return TransitiveBoundaryFusion(mode);
             }

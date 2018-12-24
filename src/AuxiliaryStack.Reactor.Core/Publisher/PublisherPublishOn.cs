@@ -55,9 +55,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             protected readonly int limit;
 
-            protected int sourceMode;
+            protected FusionMode sourceMode;
 
-            protected int outputMode;
+            protected FusionMode outputMode;
 
             protected ISubscription s;
 
@@ -109,9 +109,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     var qs = s as IFlowSubscription<T>;
                     if (qs != null)
                     {
-                        int mode = qs.RequestFusion(FuseableHelper.ANY | FuseableHelper.BOUNDARY);
+                        var mode = qs.RequestFusion(FusionMode.Any| FusionMode.Boundary);
 
-                        if (mode == FuseableHelper.SYNC)
+                        if (mode == FusionMode.Sync)
                         {
                             this.sourceMode = mode;
                             this._flow = qs;
@@ -123,7 +123,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
                         else
-                        if (mode == FuseableHelper.ASYNC)
+                        if (mode == FusionMode.Async)
                         {
                             this.sourceMode = mode;
                             this._flow = qs;
@@ -148,7 +148,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public void OnNext(T t)
             {
-                if (sourceMode == FuseableHelper.NONE)
+                if (sourceMode == FusionMode.None)
                 {
                     if (!_flow.Offer(t))
                     {
@@ -213,12 +213,12 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             void Drain()
             {
-                if (outputMode == FuseableHelper.ASYNC)
+                if (outputMode == FusionMode.Async)
                 {
                     DrainOutput();
                 }
                 else
-                if (sourceMode == FuseableHelper.SYNC)
+                if (sourceMode == FusionMode.Sync)
                 {
                     DrainSync();
                 }
@@ -233,9 +233,9 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public int RequestFusion(int mode)
+            public FusionMode RequestFusion(FusionMode mode)
             {
-                int m = mode & FuseableHelper.ASYNC;
+                var m = mode & FusionMode.Async;
                 outputMode = m;
                 return m;
             }
@@ -250,7 +250,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 var elem = _flow.Poll();
                 if (elem.IsJust)
                 {
-                    if (sourceMode != FuseableHelper.SYNC)
+                    if (sourceMode != FusionMode.Sync)
                     {
                         long p = polled + 1;
                         if (p == limit)

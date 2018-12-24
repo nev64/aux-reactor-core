@@ -1,7 +1,7 @@
 ﻿namespace AuxiliaryStack.Reactor.Core
 {
     /// <summary>
-    /// Provides an abstract asychronous boundary to operators.
+    /// Provides an abstract asynchronous boundary to operators.
     /// </summary>
     public interface IScheduler : IScheduling
     {

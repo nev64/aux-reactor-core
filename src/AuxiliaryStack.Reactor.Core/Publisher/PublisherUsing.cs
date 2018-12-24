@@ -183,7 +183,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return qs.Poll();
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 return TransitiveAnyFusion(mode);
             }
@@ -294,7 +294,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return qs.Poll();
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 return TransitiveAnyFusion(mode);
             }

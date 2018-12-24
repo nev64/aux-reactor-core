@@ -68,8 +68,8 @@ namespace AuxiliaryStack.Reactor.Core.Test
         public void TakeLast_Single_Fused()
         {
             Flux.Range(1, 10).TakeLast(1)
-                .Test(fusionMode: FuseableHelper.ANY)
-                .AssertFusionMode(FuseableHelper.ASYNC)
+                .Test(fusionMode: FusionMode.Any)
+                .AssertFusionMode(FusionMode.Async)
                 .AssertResult(10);
         }
     }

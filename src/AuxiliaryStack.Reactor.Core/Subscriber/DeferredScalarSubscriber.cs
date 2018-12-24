@@ -16,13 +16,13 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// <summary>
         /// The ISubscription to the upstream.
         /// </summary>
-        protected ISubscription s;
+        protected ISubscription _subscription;
 
         /// <summary>
         /// Constructs an instance with the given actual downstream subscriber.
         /// </summary>
         /// <param name="actual">The downstream subscriber</param>
-        public DeferredScalarSubscriber(ISubscriber<R> actual) : base(actual)
+        protected DeferredScalarSubscriber(ISubscriber<R> actual) : base(actual)
         {
         }
 
@@ -33,12 +33,12 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         public abstract void OnError(Exception e);
 
         /// <inheritdoc/>
-        public abstract void OnNext(T t);
+        public abstract void OnNext(T value);
 
         /// <inheritdoc/>
-        public void OnSubscribe(ISubscription s)
+        public void OnSubscribe(ISubscription subscription)
         {
-            if (SubscriptionHelper.Validate(ref this.s, s))
+            if (SubscriptionHelper.Validate(ref _subscription, subscription))
             {
                 _actual.OnSubscribe(this);
 
@@ -58,7 +58,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         public override void Cancel()
         {
             base.Cancel();
-            s.Cancel();
+            _subscription.Cancel();
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         /// <param name="ex">The exception to signal</param>
         public override void Error(Exception ex)
         {
-            if (Volatile.Read(ref state) == CANCELLED)
+            if (Volatile.Read(ref _state) == CANCELLED)
             {
                 ExceptionHelper.OnErrorDropped(ex);
                 return;
@@ -84,7 +84,7 @@ namespace AuxiliaryStack.Reactor.Core.Subscriber
         protected void Fail(Exception ex)
         {
             ExceptionHelper.ThrowIfFatal(ex);
-            s.Cancel();
+            _subscription.Cancel();
             OnError(ex);
         }
     }

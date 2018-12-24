@@ -354,14 +354,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 }
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 return TransitiveAnyFusion(mode);
             }
 
             public override Option<T> Poll()
             {
-                if (fusionMode == FuseableHelper.SYNC)
+                if (fusionMode == FusionMode.Sync)
                 {
                     var elem = qs.Poll();
 
@@ -579,14 +579,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return b;
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 return TransitiveAnyFusion(mode);
             }
 
             public override Option<T> Poll()
             {
-                if (fusionMode == FuseableHelper.SYNC)
+                if (fusionMode == FusionMode.Sync)
                 {
                     var elem = qs.Poll();
                     if (elem.IsJust)

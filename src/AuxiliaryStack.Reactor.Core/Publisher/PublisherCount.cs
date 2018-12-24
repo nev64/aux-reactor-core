@@ -26,7 +26,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public override void OnComplete()
             {
-                Complete(value);
+                Complete(_value);
             }
 
             public override void OnError(Exception e)
@@ -36,7 +36,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public override void OnNext(T t)
             {
-                value++;
+                _value++;
             }
         }
     }

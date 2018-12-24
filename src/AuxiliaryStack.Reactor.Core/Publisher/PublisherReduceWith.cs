@@ -44,23 +44,23 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public ReduceWithSubscriber(ISubscriber<A> actual, A accumulator, Func<A, T, A> reducer) : base(actual)
             {
-                this.value = accumulator;
+                this._value = accumulator;
                 this.reducer = reducer;
             }
 
             protected override void OnStart()
             {
-                s.Request(long.MaxValue);
+                _subscription.Request(long.MaxValue);
             }
 
             public override void OnComplete()
             {
-                Complete(value);
+                Complete(_value);
             }
 
             public override void OnError(Exception e)
             {
-                value = default(A);
+                _value = default(A);
                 _actual.OnError(e);
             }
 
@@ -68,7 +68,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
             {
                 try
                 {
-                    value = reducer(value, t);
+                    _value = reducer(_value, t);
                 }
                 catch (Exception ex)
                 {

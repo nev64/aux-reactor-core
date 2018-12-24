@@ -70,6 +70,6 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
         }
 
         /// <inheritdoc />
-        public int RequestFusion(int mode) => mode & FuseableHelper.ASYNC;
+        public FusionMode RequestFusion(FusionMode mode) => mode & FusionMode.Async;
     }
 }

@@ -59,7 +59,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public override void OnNext(T t)
             {
-                if (fusionMode != FuseableHelper.NONE)
+                if (fusionMode != FusionMode.None)
                 {
                     actual.OnNext(t);
                     return;
@@ -87,26 +87,26 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return true;
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 var qs = this.qs;
                 if (qs != null)
                 {
-                    int m = qs.RequestFusion(mode);
-                    if (m != FuseableHelper.NONE)
+                    var m = qs.RequestFusion(mode);
+                    if (m != FusionMode.None)
                     {
                         fusionMode = m;
                     }
                     return m;
                 }
-                return FuseableHelper.NONE;
+                return FusionMode.None;
             }
 
             public override Option<T> Poll()
             {
                 var qs = this.qs;
                 T local;
-                if (fusionMode == FuseableHelper.SYNC)
+                if (fusionMode == FusionMode.Sync)
                 {
                     for (;;)
                     {
@@ -187,7 +187,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public override void OnNext(T t)
             {
-                if (fusionMode != FuseableHelper.NONE)
+                if (fusionMode != FusionMode.None)
                 {
                     actual.OnNext(t);
                     return;
@@ -214,26 +214,26 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return actual.TryOnNext(t);
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
                 var qs = this.qs;
                 if (qs != null)
                 {
-                    int m = qs.RequestFusion(mode);
-                    if (m != FuseableHelper.NONE)
+                    var m = qs.RequestFusion(mode);
+                    if (m != FusionMode.None)
                     {
                         fusionMode = m;
                     }
                     return m;
                 }
-                return FuseableHelper.NONE;
+                return FusionMode.None;
             }
 
             public override Option<T> Poll()
             {
                 var qs = this.qs;
                 T local;
-                if (fusionMode == FuseableHelper.SYNC)
+                if (fusionMode == FusionMode.Sync)
                 {
                     for (;;)
                     {

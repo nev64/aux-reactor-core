@@ -629,7 +629,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             long produced;
 
-            int fusionMode;
+            FusionMode fusionMode;
 
             internal FlatMapInnerSubscriber(FlatMapSubscriber parent, int prefetch)
             {
@@ -645,8 +645,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     var qs = s as IFlowSubscription<R>;
                     if (qs != null)
                     {
-                        int m = qs.RequestFusion(FuseableHelper.ANY);
-                        if (m == FuseableHelper.SYNC)
+                        var m = qs.RequestFusion(FusionMode.Any);
+                        if (m == FusionMode.Sync)
                         {
                             fusionMode = m;
                             _flow = qs;
@@ -656,7 +656,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             return;
                         }
                         else
-                        if (m == FuseableHelper.ASYNC)
+                        if (m == FusionMode.Async)
                         {
                             fusionMode = m;
                             _flow = qs;
@@ -691,7 +691,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             internal void RequestOne()
             {
-                if (fusionMode != FuseableHelper.SYNC)
+                if (fusionMode != FusionMode.Sync)
                 {
                     long p = produced + 1;
                     if (p == limit)
@@ -744,7 +744,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             internal bool IsAsyncFused()
             {
-                return fusionMode == FuseableHelper.ASYNC;
+                return fusionMode == FusionMode.Async;
             }
         }
     }

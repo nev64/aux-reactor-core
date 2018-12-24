@@ -364,7 +364,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             long consumed;
 
-            int fusionMode;
+            FusionMode fusionMode;
 
             internal IFlow<R> _flow;
 
@@ -385,8 +385,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                     var qs = s as IFlowSubscription<R>;
                     if (qs != null)
                     {
-                        int m = qs.RequestFusion(FuseableHelper.ANY);
-                        if (m == FuseableHelper.SYNC)
+                        var m = qs.RequestFusion(FusionMode.Any);
+                        if (m == FusionMode.Sync)
                         {
                             fusionMode = m;
                             _flow = qs;
@@ -395,7 +395,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                             parent.Drain();
                         }
                         else
-                        if (m == FuseableHelper.ASYNC)
+                        if (m == FusionMode.Async)
                         {
                             fusionMode = m;
                             _flow = qs;
@@ -414,7 +414,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public void OnNext(R t)
             {
-                if (fusionMode != FuseableHelper.ASYNC)
+                if (fusionMode != FusionMode.Async)
                 {
                     _flow.Offer(t);
                 }
@@ -434,7 +434,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             internal void RequestOne()
             {
-                if (fusionMode != FuseableHelper.SYNC)
+                if (fusionMode != FusionMode.Sync)
                 {
                     long p = consumed + 1;
                     if (p == limit)

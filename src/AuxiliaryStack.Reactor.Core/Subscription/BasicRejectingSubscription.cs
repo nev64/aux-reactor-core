@@ -34,9 +34,9 @@ namespace AuxiliaryStack.Reactor.Core.Subscription
 
         public abstract void Request(long n);
 
-        public int RequestFusion(int mode)
+        public FusionMode RequestFusion(FusionMode mode)
         {
-            return FuseableHelper.NONE;
+            return FusionMode.None;
         }
     }
 }

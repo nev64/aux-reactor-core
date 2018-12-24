@@ -44,7 +44,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             long requested;
 
-            int outputMode;
+            FusionMode outputMode;
 
             Exception error;
 
@@ -80,7 +80,7 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
 
             public override void OnNext(T t)
             {
-                if (fusionMode != FuseableHelper.ASYNC)
+                if (fusionMode != FusionMode.Async)
                 {
                     if (!_flow.Offer(t))
                     {
@@ -124,14 +124,14 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 return _flow.IsEmpty();
             }
 
-            public override int RequestFusion(int mode)
+            public override FusionMode RequestFusion(FusionMode mode)
             {
-                if ((mode & FuseableHelper.SYNC) != 0 && fusionMode == FuseableHelper.SYNC)
+                if ((mode & FusionMode.Sync) != 0 && fusionMode == FusionMode.Sync)
                 {
-                    outputMode = FuseableHelper.SYNC;
-                    return FuseableHelper.SYNC;
+                    outputMode = FusionMode.Sync;
+                    return FusionMode.Sync;
                 }
-                return FuseableHelper.NONE;
+                return FusionMode.None;
             }
 
             public override void Request(long n)
@@ -160,8 +160,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                 var qs = this.qs;
                 if (qs != null)
                 {
-                    int m = qs.RequestFusion(FuseableHelper.ANY);
-                    if (m == FuseableHelper.SYNC)
+                    var m = qs.RequestFusion(FusionMode.Any);
+                    if (m == FusionMode.Sync)
                     {
                         _flow = qs;
                         fusionMode = m;
@@ -172,8 +172,8 @@ namespace AuxiliaryStack.Reactor.Core.Publisher
                         Drain();
                         return false;
                     }
-                    else
-                    if (m == FuseableHelper.ASYNC)
+
+                    if (m == FusionMode.Async)
                     {
                         _flow = qs;
                         fusionMode = m;
